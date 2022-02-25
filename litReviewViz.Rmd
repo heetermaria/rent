@@ -1,0 +1,37 @@
+---
+title: "visualizationLitReview"
+author: "Maria Heeter"
+date: "2/5/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+```
+
+## loads in both datasets 
+
+```{r cars, echo=FALSE}
+# imports CPI Rent/ HPI sep graph 
+RentHpiSep <- read_excel("CPI Rent and HPI (separated).xls",skip = 11)
+
+# imports joint CPI/HPI graph 
+RentHpiJoint <- read_excel("All-Transactions House Price Index for the United States:Consumer Price Index for All Urban Consumers- Rent of Primary Residence in U.S. City Average.xls", 
+    skip = 10)
+
+```
+
+## Including Plots
+
+``` {r, echo=FALSE}
+library("ggplot2")
+library("ggthemes")
+library("stringr")
+
+joinedPlot <- ggplot(RentHpiJoint, aes(x=observation_date,y=RentHpiJoint$USSTHPI_CUUR0000SEHA )) + geom_line() + labs(title = str_wrap("All-Transactions House Price Index for the United States/Consumer Price Index for All Urban Consumers: Rent of Primary Residence in U.S. City Average", 60)) + ylab("Index 1980:Q1=100/Index 1982-1984=100") + xlab("Date of Observation")
+
+joinedPlot + theme_stata()
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

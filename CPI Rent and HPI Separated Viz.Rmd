@@ -1,0 +1,182 @@
+---
+title: "visualizationLitReview"
+author: "Maria Heeter"
+date: "2/5/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+library(censusapi)
+library(tidycensus)
+library(tidyverse)
+library(viridis)
+library(dplyr)
+library(tidyr)
+library(reshape2)
+```
+
+## loads in both datasets 
+
+```{r cars, echo=FALSE}
+# imports CPI Rent/ HPI sep graph 
+RentHpiSep <- read_excel("CPI Rent and HPI (separated).xls",skip = 11)
+
+# imports joint CPI/HPI graph 
+RentHpiJoint <- read_excel("All-Transactions House Price Index for the United States:Consumer Price Index for All Urban Consumers- Rent of Primary Residence in U.S. City Average.xls", 
+    skip = 10)
+
+```
+
+## Including Plots
+
+``` {r, echo=FALSE}
+library("ggplot2")
+library("ggthemes")
+library("stringr")
+
+joinedPlot <- ggplot(RentHpiJoint, aes(x=observation_date,y=RentHpiJoint$USSTHPI_CUUR0000SEHA )) + geom_line() + ylab("Index 1980:Q1=100/Index 1982-1984=100") + xlab("Date of Observation") + labs(caption = "Sources: FHFA; BLS")
+
+#labs(title = str_wrap("All-Transactions House Price Index for the United States/Consumer Price Index for All Urban Consumers: Rent of Primary Residence in U.S. City Average", 60))
+
+joinedPlot + theme_stata()
+
+
+                                     
+```
+
+```{r, echo=FALSE}
+
+sepPlot <-  ggplot() + geom_line(data = RentHpiSep, aes(x=observation_date...1, y=CUSR0000SEHC), color="blue") + geom_line(data=RentHpiSep, aes(x=observation_date...4, y=USSTHPI), color="red") + ylab("Index Dec 1982=100, Index 1980:Q1=100") + xlab("Date of Observation") + labs(caption="Sources: FHFA; BLS")
+
+sepPlot + theme_stata()
+
+```
+
+## map of SMSAs 
+
+```{r, include=FALSE, echo=FALSE}
+
+library(tidycensus)
+library(tidyverse)
+library(tigris)
+library(usmap)
+options(tigris_use_cache=TRUE)
+
+state_overlay <- states(
+  cb = TRUE,
+  resolution = "20m"
+) %>%
+  filter(GEOID != "72") %>%
+  shift_geometry()
+
+mapPlot <- ggplot() + geom_sf(data = state_overlay, fill = NA, color = "black", size = 0.1)
+
+mapPlot
+
+# recall: check email, then supply the key to the census_api_key function to use it throughout tidycensus session. 
+
+usmap::plot_usmap
+
+```
+## Api Set up 
+
+```{r, API setup}
+# getting started w censusapi 
+# sign up for an API key 
+
+# add key to .Renviron 
+Sys.setenv(CENSUS_KEY="6d7ca29c7ed75ec60a626822e88603fa6231567c")
+
+# reload .Renviron 
+readRenviron("~/.Renviron")
+
+# check to see that expected key is output in R console 
+Sys.getenv("CENSUS_KEY")
+```
+
+## Finding your API 
+ 
+```{r}
+# getting started - load the censusapi library 
+library(censusapi)
+
+# to see a list of available end points 
+apis <- listCensusApis()
+View(apis)
+``` 
+
+## Loading in data 
+
+```{r, echo=FALSE}
+
+census_api_key("6d7ca29c7ed75ec60a626822e88603fa6231567c", install=TRUE,overwrite=TRUE)
+
+# api key can be accessed: Sys.getenv("CENSUS_API_KEY").
+```
+
+```{r}
+# time series: use the tidycensus function "get estimates() to get pop estimates by county for each year beg. in 2010 
+# computing a time series estimate 
+
+years <- 2009:2019
+names(years) <- years
+
+priceVars <- c(contract_rent="B25056_001E", housing_value="B25075_001E")
+
+pricesByYear <- map_dfr(years, ~{get_acs(geography="county", variables=priceVars, survey="acs1", year=.x
+                                         )
+  },.id="year")
+
+# description of the data used:
+
+# ** one year estimates ** B25075_001E is Value for owner-occupied housing units. description: the respondent's estimate of how much the property (house and lot, mobile home and lot, or condominium unit) would sell for if it were for sale.
+
+# description: https://www.socialexplorer.com/data/ACS2010/metadata/?ds=ACS10&var=B25075001
+  
+# ** one year estimates ** B25056_001E is Contract Rent for Renter-occupied housing units. The data on contract rent (also referred to as "rent asked" for vacant units) were obtained from Housing Question 18a in the 2013 American Community Survey. The question was asked at occupied housing units that were for rent, vacant housing units that were for rent, and vacant units rented but not occupied at the time of interview.
+
+# description: https://www.socialexplorer.com/data/ACS2016/metadata/?ds=ACS16&table=B25056
+
+# data not used, but considered: # ** one year estimates ** B25031_001E is MEDIAN GROSS RENT BY BEDROOMS. description: Median gross rent divides the gross rent distribution into two equal parts: one-half of the cases falling below the median gross rent and one-half above the median. Median gross rent is computed on the basis of a standard distribution. (See the "Median Standard Distributions" section in Appendix A). Median gross rent is rounded to the nearest whole dollar. The median gross rent explanation is comparable to the description used for Median and Quartile Contract Rent. (For more information on medians, see "Derived Measures.")
+
+# description: https://www.socialexplorer.com/data/ACS2015/metadata/?ds=ACS15&var=B25031001
+
+```
+
+## reshaping data 
+
+```{r}
+# long to wide using dcast() function in R: gets the table name and the list of columns to be kept constant (counties) and list of columns to be reshaped (variable) is passed as argument to reshape from long to wide 
+
+# original: pricesByYear
+county_L_to_W = dcast(pricesByYear, GEOID + NAME + year~variable,sum,value.var="moe")
+view(county_L_to_W)
+
+```
+
+## adding new variables 
+
+```{r}
+# note: here, we'll turn to the description in other papers of which counties were selected
+
+# need to insert: 
+
+# 1) the real annual rent growth rate in area i between years t and t+1, (g)
+# 2) the rent-price ratio for area i in year t. (Rt / Pt)
+
+# first, inserting the growth rate 
+
+rent_growth_rate = county_L_to_W %>% arrange(year) %>% mutate(diff_year = strtoi(year) - lag(strtoi(year)), diff_growth = B25056_001 - lag(B25056_001), rate_percent = (diff_growth/diff_year)/B25056_001 * 100)
+view(rent_growth_rate)
+
+# this isn't working bc we aren't arranging by time series 
+```
+
+
+
+
+```
+
+
