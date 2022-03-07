@@ -7,6 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+# census, etc 
 library(readxl)
 library(censusapi)
 library(tidycensus)
@@ -15,6 +16,10 @@ library(viridis)
 library(dplyr)
 library(tidyr)
 library(reshape2)
+# maps 
+library(maps)
+library(usmap)
+library(ggplot2)
 ```
 
 ## loads in both datasets 
@@ -123,13 +128,15 @@ census_api_key("6d7ca29c7ed75ec60a626822e88603fa6231567c", install=TRUE,overwrit
 years <- 2009:2019
 names(years) <- years
 
-priceVars <- c(contract_rent="B25056_001E", housing_value="B25075_001E")
+priceVars <- c(contract_rent="B25056_001", housing_value="B25077_001",population="B01003_001", median_age_by_sex="B01002_001") # 
 
 pricesByYear <- map_dfr(years, ~{get_acs(geography="county", variables=priceVars, survey="acs1", year=.x
                                          )
   },.id="year")
 
-# description of the data used:
+view(pricesByYear) #here, the housing figure is correct # updated, yes, it's correct 
+
+# description of the data used (UPDATE THIS!!) 
 
 # ** one year estimates ** B25075_001E is Value for owner-occupied housing units. description: the respondent's estimate of how much the property (house and lot, mobile home and lot, or condominium unit) would sell for if it were for sale.
 
@@ -145,14 +152,24 @@ pricesByYear <- map_dfr(years, ~{get_acs(geography="county", variables=priceVars
 
 ```
 
+## here we can see each variable by dataset  
+
+```{r}
+v19 <- load_variables(2019, "acs1", cache=FALSE)
+view(v19)
+
+v09 <- load_variables(2009, "acs1", cache=FALSE)
+view(v09)
+
+```
+
 ## reshaping data 
 
 ```{r}
 # long to wide using dcast() function in R: gets the table name and the list of columns to be kept constant (counties) and list of columns to be reshaped (variable) is passed as argument to reshape from long to wide 
 
-# original: pricesByYear
-county_L_to_W = dcast(pricesByYear, GEOID + NAME + year~variable,sum,value.var="moe")
-view(county_L_to_W)
+long_to_wide = dcast(pricesByYear, year + GEOID + NAME ~ variable, value.var = "estimate")
+view(long_to_wide) # NOTE: getting rid of margin of error 
 
 ```
 
@@ -161,14 +178,14 @@ view(county_L_to_W)
 ```{r}
 # note: here, we'll turn to the description in other papers of which counties were selected
 
-# need to insert: 
+# need to insert: need
 
 # 1) the real annual rent growth rate in area i between years t and t+1, (g)
 # 2) the rent-price ratio for area i in year t. (Rt / Pt)
 
-# first, inserting the growth rate 
+# first, inserting the rent growth rate 
 
-rent_growth_rate = county_L_to_W %>% group_by(GEOID) %>% arrange(year) %>% mutate(diff_year = strtoi(year) - lag(strtoi(year)), diff_growth = B25056_001 - lag(B25056_001), rate_percent = (diff_growth/diff_year)/B25056_001 * 100)
+rent_growth_rate = long_to_wide %>% group_by(GEOID) %>% arrange(year) %>% mutate(diff_year = strtoi(year) - lag(strtoi(year)), diff_growth = contract_rent - lag(contract_rent), rate_percent = (diff_growth/diff_year)/contract_rent * 100)
 # view 
 view(rent_growth_rate)
 
@@ -176,16 +193,16 @@ view(rent_growth_rate)
 
 # now, calculate rent-price ratio for area i in year t (Rt/Pt)
 
-rent_price_ratio = rent_growth_rate %>% group_by(GEOID) %>% arrange(year) %>% mutate(rent_price_ratio= B25056_001/B25075_001)
+rent_price_ratio = rent_growth_rate %>% group_by(GEOID) %>% arrange(year) %>% mutate(rent_price_ratio= contract_rent/housing_value)
 # view 
 view(rent_price_ratio)
 
 # get rid of figures missing either rent or housing prices using tidyr method 
-rent_price_ratio = rent_price_ratio %>% drop_na(B25056_001) 
-rent_price_ratio = rent_price_ratio %>% drop_na(B25075_001)
+rent_price_ratio = rent_price_ratio %>% drop_na(contract_rent) 
+rent_price_ratio = rent_price_ratio %>% drop_na(housing_value)
 view(rent_price_ratio)
 
-# add in the price deflator for personal consumption expenditures excluding good & energy to deflate nominal values
+# now, add in the price deflator for personal consumption expenditures excluding good & energy to deflate nominal values
 
 # load in price deflator dataset 
 
@@ -198,26 +215,153 @@ view(priceDeflator)
 rent_price_ratio <- merge(rent_price_ratio, priceDeflator,by="year")
 view(rent_price_ratio)
 
+# separating county into county, state 
+
+# split NAME column into county name and state 
+rent_price_ratio <- rent_price_ratio %>% separate(NAME, c("county_name", "state_name"), ", ")
+view(rent_price_ratio) # it works! don't run line above, as it's been sepped, unless in order / running all 
+```
+
+```{r}
+# data visualization & summary stats 
+
+# installed dev tools ( following this tutorial https://urban-institute.medium.com/how-to-create-state-and-county-maps-easily-in-r-577d29300bb2)
+
+# trying out maps 
+
+library(urbnmapr)
+
+# test of state map 
+
+states_sf <- get_urbn_map("states", sf = TRUE)
+
+states_sf %>% 
+  ggplot(aes()) +
+  geom_sf(fill = "grey", color = "#ffffff")
+
+# test of county map 
+
+counties_sf <- get_urbn_map("counties", sf = TRUE)
+counties_sf %>% ggplot(aes()) + geom_sf(fill="grey", color="#ffffff")
+
+# now, joining fips code by county name should work 
+
+# mappingData <- semi_join(rent_price_ratio, urbnmapr::counties, by=c("GEOID"="county_fips")
+# glimpse(mappingData)
+# view(mappingData)
+
+# that didn't work 
+
+# changing col name 
+colnames(rent_price_ratio)[colnames(rent_price_ratio)=="GEOID"] <- "fips"
+view(rent_price_ratio)
+
+```
+
+## adds some more variables 
+
+```{r}
+# adding growth rate for house prices 
+
+rent_price_ratio <- rent_price_ratio %>% group_by(fips) %>% arrange(year) %>% mutate(diff_housing_growth = housing_value - lag(housing_value), growth_rate_housing = (diff_housing_growth/diff_year)/housing_value * 100) # new - old = diff, growth rate is diff/1 * 100 
+
+view(rent_price_ratio)
+
+# renames 
+
+df <- rent_price_ratio
+
+# adds median value for rent price ratio, housing value, contract rent, rate percent, housing growth rate
+
+df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_rent_price_ratio = mean(rent_price_ratio, na.rm=TRUE)) # stripping the NAs
+
+df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_housing_value = mean(housing_value, na.rm=TRUE)) # strip NAs
+
+df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_contract_rent = mean(contract_rent, na.rm=TRUE)) # strip NAs
+
+df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_rent_pct_change = mean(rate_percent, na.rm=TRUE)) #  strip NAs 
+
+df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_housing_growth = mean(growth_rate_housing, na.rm=TRUE)) # strip NAs
+
+view(df)
+                                                            
+```
+
+# map building 
+
+```{r}
+
+usmap::plot_usmap(regions = "counties") # sample map 
+
+# take the average of each of these values 
+
+rent_price_ratio_map <- plot_usmap(data = df, values="mean_rent_price_ratio", include = c(df$fips), color="black") + scale_fill_gradientn(name="Average Rent-Price Ratio (2006-2019)", colours = c("blue", "white", "darkred"), label = scales::comma) + theme(legend.position="right")
+rent_price_ratio_map # fix label 
+
+housing_value_map <- plot_usmap(data = df, values="mean_housing_value", include = c(df$fips), color="black") + scale_fill_gradientn(name="Average Housing Value (2006-2019)", colours = c("blue", "white", "darkred"), label = scales::comma) + theme(legend.position="right")
+housing_value_map 
+
+rent_value_map <- plot_usmap(data = df, values="mean_contract_rent", include = c(df$fips), color="black") + scale_fill_gradientn(name="Average Contract Rent (2006-2019)", colours = c("blue", "white", "darkred"), label = scales::comma) + theme(legend.position="right")
+rent_value_map 
+
+# rent growth gradient map 
+
+rent_growth_map <- plot_usmap(data = df, values="mean_rent_pct_change", include = c(df$fips), color="black") + scale_fill_gradientn(name="Average Rent Percent Change (2006-2019)", colours = c("blue", "white", "darkred"), breaks=c(10,-20), label = scales::comma) + theme(legend.position="right")
+rent_growth_map 
+                       
+# housing percent change in growth take 1 
+
+housing_growth_map <- plot_usmap(data = df, values="mean_housing_growth", include = c(df$fips), color="black") + scale_fill_continuous(low="blue", high="red", name="Median Housing Growth (2006-2019)", label=scales::comma) + theme(legend.position="right")
+housing_growth_map 
+
+# housing percent change in growth take 2 
+
+housing_growth_map <- plot_usmap(data = df, values="mean_housing_growth", include = c(df$fips), color="black") + scale_fill_gradientn(name="Average Housing Price Growth (2006-2019)", colours = c("blue", "white", "red"), breaks=c(10,-20), label = scales::comma) + theme(legend.position="right")
+housing_growth_map
+                                                                                                                                     
+                                                                                                                                  
+# how to make negative: https://stackoverflow.com/questions/63004413/r-usmap-how-to-show-two-different-colors-one-for-gradients-in-positive-value
+
+# notes on summary stats for time series 
+
+# sum doesn't deliniate cross sectional data (but include in appencix)
+# time plots, maps 
+# rent-price ratio figure & map. avg rent-price ratio overtime 
+
+# three plots: 
+# rent over time, hp over time & ratio 
+
+```
+# notes 
+
+```{r}
 # generally, are there other demographics that could be helpful?
 
 # population 
 # income 
 # racial demographics 
 # employment rates 
+# age 
+
+# hundreds of thousands 
+
+# do everything w counties 
+# maybe sub samples w different criteria later 
+
+# do summary stats... data visualization 
+# mapping 
+# by county averaging rent price ratio over time period, mapping that # visualize rate of change by county 
+
+# combo of time plots and maps 
+# is there variation? are there patterns in the variation? 
 
 ```
+
+# summary stats 
 
 ```{r}
-# building a regression of year t to year t + 1 rent growth on year t rent-price ratio 
-
-
-
 
 ```
 
-
-
-
-```
 
 
