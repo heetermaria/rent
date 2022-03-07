@@ -168,10 +168,51 @@ view(county_L_to_W)
 
 # first, inserting the growth rate 
 
-rent_growth_rate = county_L_to_W %>% arrange(year) %>% mutate(diff_year = strtoi(year) - lag(strtoi(year)), diff_growth = B25056_001 - lag(B25056_001), rate_percent = (diff_growth/diff_year)/B25056_001 * 100)
+rent_growth_rate = county_L_to_W %>% group_by(GEOID) %>% arrange(year) %>% mutate(diff_year = strtoi(year) - lag(strtoi(year)), diff_growth = B25056_001 - lag(B25056_001), rate_percent = (diff_growth/diff_year)/B25056_001 * 100)
+# view 
 view(rent_growth_rate)
 
-# this isn't working bc we aren't arranging by time series 
+# check that this works w prof. kacher 
+
+# now, calculate rent-price ratio for area i in year t (Rt/Pt)
+
+rent_price_ratio = rent_growth_rate %>% group_by(GEOID) %>% arrange(year) %>% mutate(rent_price_ratio= B25056_001/B25075_001)
+# view 
+view(rent_price_ratio)
+
+# get rid of figures missing either rent or housing prices using tidyr method 
+rent_price_ratio = rent_price_ratio %>% drop_na(B25056_001) 
+rent_price_ratio = rent_price_ratio %>% drop_na(B25075_001)
+view(rent_price_ratio)
+
+# add in the price deflator for personal consumption expenditures excluding good & energy to deflate nominal values
+
+# load in price deflator dataset 
+
+priceDeflator <- read_csv("priceDeflator.csv")
+priceDeflator = subset(priceDeflator, select = -c(...1) ) # gets rid of extra row 
+view(priceDeflator)
+
+# adds price deflator by year 
+
+rent_price_ratio <- merge(rent_price_ratio, priceDeflator,by="year")
+view(rent_price_ratio)
+
+# generally, are there other demographics that could be helpful?
+
+# population 
+# income 
+# racial demographics 
+# employment rates 
+
+```
+
+```{r}
+# building a regression of year t to year t + 1 rent growth on year t rent-price ratio 
+
+
+
+
 ```
 
 
