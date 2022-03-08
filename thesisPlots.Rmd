@@ -1,0 +1,138 @@
+---
+title: "Plots"
+author: "Maria Heeter"
+date: "3/7/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+library(censusapi)
+library(tidycensus)
+library(tidyverse)
+library(viridis)
+library(dplyr)
+library(tidyr)
+library(reshape2)
+# maps 
+library(maps)
+library(usmap)
+library(ggplot2)
+```
+
+## import in datasets datasets 
+
+```{r}
+# imports CPI Rent/ HPI sep graph 
+RentHpiSep <- read_excel("CPI Rent and HPI (separated).xls",skip = 11)
+
+# imports joint CPI/HPI graph 
+RentHpiJoint <- read_excel("All-Transactions House Price Index for the United States:Consumer Price Index for All Urban Consumers- Rent of Primary Residence in U.S. City Average.xls", 
+    skip = 10)
+
+df <- read.csv("thesisDF.csv")
+view(df)
+```
+
+## Fed Plot 1 
+
+```{r, echo=FALSE}
+library("ggplot2")
+library("ggthemes")
+library("stringr")
+
+joinedPlot <- ggplot(RentHpiJoint, aes(x=observation_date,y=RentHpiJoint$USSTHPI_CUUR0000SEHA )) + geom_line() + ylab("Index 1980:Q1=100/Index 1982-1984=100") + xlab("Date of Observation") + labs(caption = "Sources: FHFA; BLS")
+
+#labs(title = str_wrap("All-Transactions House Price Index for the United States/Consumer Price Index for All Urban Consumers: Rent of Primary Residence in U.S. City Average", 60))
+
+joinedPlot + theme_stata()
+```
+
+## Fed Plot 2 
+```{r}
+sepPlot <-  ggplot() + geom_line(data = RentHpiSep, aes(x=observation_date...1, y=CUSR0000SEHC), color="blue") + geom_line(data=RentHpiSep, aes(x=observation_date...4, y=USSTHPI), color="red") + ylab("Index Dec 1982=100, Index 1980:Q1=100") + xlab("Date of Observation") + labs(caption="Sources: FHFA; BLS")
+
+sepPlot + theme_stata()
+```
+
+# map building 
+
+```{r}
+
+# map building 
+usmap::plot_usmap(regions = "counties") # sample map 
+
+# take the average of each of these values 
+
+rent_price_ratio_map <- plot_usmap(data = df, values="mean_rent_price_ratio", include = c(df$fips), color="black") + scale_fill_gradientn(name="Average Rent-Price Ratio (2006-2019)", colours = c("blue", "white", "darkred"), label = scales::comma) + theme(legend.position="right")
+rent_price_ratio_map # fix label 
+
+housing_value_map <- plot_usmap(data = df, values="mean_housing_value", include = c(df$fips), color="black") + scale_fill_gradientn(name="Average Housing Value (2006-2019)", colours = c("blue", "white", "darkred"), label = scales::comma) + theme(legend.position="right")
+housing_value_map 
+
+rent_value_map <- plot_usmap(data = df, values="mean_contract_rent", include = c(df$fips), color="black") + scale_fill_gradientn(name="Average Contract Rent (2006-2019)", colours = c("blue", "white", "darkred"), label = scales::comma) + theme(legend.position="right")
+rent_value_map 
+
+# rent growth gradient map 
+
+rent_growth_map <- plot_usmap(data = df, values="mean_rent_pct_change", include = c(df$fips), color="black") + scale_fill_gradientn(name="Average Rent Percent Change (2006-2019)", colours = c("blue", "white", "darkred"), breaks=c(10,-20), label = scales::comma) + theme(legend.position="right")
+rent_growth_map 
+                       
+# housing percent change in growth take 1 
+
+housing_growth_map <- plot_usmap(data = df, values="mean_housing_growth", include = c(df$fips), color="black") + scale_fill_continuous(low="blue", high="red", name="Median Housing Growth (2006-2019)", label=scales::comma) + theme(legend.position="right")
+housing_growth_map 
+
+# housing percent change in growth take 2 
+
+housing_growth_map <- plot_usmap(data = df, values="mean_housing_growth", include = c(df$fips), color="black") + scale_fill_gradientn(name="Average Housing Price Growth (2006-2019)", colours = c("blue", "white", "red"), breaks=c(10,-20), label = scales::comma) + theme(legend.position="right")
+housing_growth_map
+                                                                                                          
+# how to make negative: https://stackoverflow.com/questions/63004413/r-usmap-how-to-show-two-different-colors-one-for-gradients-in-positive-value
+```
+
+```{r}
+# generally, are there other demographics that could be helpful?
+
+# population 
+# income 
+# racial demographics 
+# employment rates 
+# age 
+
+# hundreds of thousands 
+
+# do everything w counties 
+# maybe sub samples w different criteria later 
+
+# do summary stats... data visualization 
+# mapping 
+# by county averaging rent price ratio over time period, mapping that # visualize rate of change by county 
+
+# combo of time plots and maps 
+# is there variation? are there patterns in the variation? 
+
+# notes on summary stats for time series 
+
+# sum doesn't deliniate cross sectional data (but include in appencix)
+# time plots, maps 
+# rent-price ratio figure & map. avg rent-price ratio overtime 
+
+# three plots: 
+# rent over time, hp over time & ratio 
+
+```
+
+# actual summary stats section 
+
+```{r}
+
+# avg rent over time 
+
+# hp over time 
+
+# ratio over time 
+
+
+```
