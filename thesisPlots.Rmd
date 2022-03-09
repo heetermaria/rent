@@ -19,9 +19,12 @@ library(reshape2)
 library(maps)
 library(usmap)
 library(ggplot2)
+library(ggthemes)
+library(stringr)
+library(latticeExtra)
 ```
 
-## import in datasets datasets 
+## import in datasets 
 
 ```{r}
 # imports CPI Rent/ HPI sep graph 
@@ -130,9 +133,47 @@ housing_growth_map
 
 # avg rent over time 
 
-# hp over time 
 
-# ratio over time 
+# makes new cols. 1) average rent by all counties, 2) avg contract rent, 3) price-rent ratio 
+
+df <- df %>% group_by(year) %>% mutate(mean_mean_contract_rent = mean(mean_contract_rent)) %>% mutate(mean_mean_housing_value = mean(mean_housing_value)) %>% mutate(mean_mean_rent_price_ratio = mean(mean_rent_price_ratio))
+view(df)
+
+# makes a new col that's average HPI by all counties 
+
+# makes a new col that's avg rent-price ratio 
+
+# line plot of contract rent over time 
+
+mean_contract_rent_plot <- df %>% ggplot(aes(x=year, y = mean_mean_contract_rent, color="red")) + geom_line()
+mean_contract_rent_plot  
+
+# plot of hp over time 
+
+mean_housing_value_plot <- df %>% ggplot(aes(x=year, y = mean_mean_housing_value, color="red")) + geom_line()
+mean_housing_value_plot
+
+# join the two plots 
+
+sepPlot <- ggplot() + geom_line(data = df, aes(x=year, y=mean_mean_contract_rent), color="blue") + geom_line(data=df, aes(x=year, y=mean_mean_housing_value, color="red"))
+sepPlot # NOTE: not an index 
+                                                                                                  # # another attempt to divide        
+
+obj1 <- xyplot(mean_mean_contract_rent ~ year, df, type="l", lwd=2)
+obj2 <- xyplot(mean_mean_housing_value ~ year, df, type = "l", lwd=2)
+doubleYScale(obj1, obj2, text=c("rent", "housing value"), add.ylab2=TRUE) 
+
+# plot of rent price ratio over time 
+
+mean_price_rent_ratio_plot <- df %>% ggplot(aes(x=year, y = mean_mean_rent_price_ratio, color="red")) + geom_line() 
+mean_price_rent_ratio_plot
 
 
+```
+## just plain summary stats 
+
+```{r}
+summary(df)
+ts <- ts(df)
+summary(ts)
 ```
