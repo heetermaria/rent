@@ -22,6 +22,15 @@ library(ggplot2)
 library(ggthemes)
 library(stringr)
 library(latticeExtra)
+# Checks if package is installed, installs if necessary, and loads package for current session
+
+pacman::p_load(
+  lubridate,  # general package for handling and converting dates  
+  linelist,   # has function to "guess" messy dates
+  aweek,      # another option for converting dates to weeks, and weeks to dates
+  zoo,        # additional date/time functions
+  tidyverse,  # data management and visualization  
+  rio)        # data import/export
 ```
 
 ## import in datasets 
@@ -168,12 +177,80 @@ doubleYScale(obj1, obj2, text=c("rent", "housing value"), add.ylab2=TRUE)
 mean_price_rent_ratio_plot <- df %>% ggplot(aes(x=year, y = mean_mean_rent_price_ratio, color="red")) + geom_line() 
 mean_price_rent_ratio_plot
 
+# another attempt, with an index. here we need the first year (2009), then divide all years by 2009 and multiply by 100. then plot those. 
+
+# adds index column to plot 
+
+df <- df %>% mutate(rentIndex = (mean_mean_contract_rent/51161.71)*100) # where the number is the 2009 mean contract rent!! 
+df <- df %>% mutate(houseIndex = (mean_mean_housing_value/200618.2)*100)
+view(df)
+
+# adds rent_price_ratio from mean_mean values to the plot 
+
+df <- df %>% mutate(rent_price_ratio_national=mean_mean_contract_rent/mean_mean_housing_value)
+view(df) # i actually don't think we should have done it this way 
+
+df <- df %>% mutate(rent_price_ratio_national_index = rentIndex/houseIndex)
+
+# now, plot above (taking same template as fed plot)
+
+indexPlot <-  ggplot() + geom_line(data = df, aes(x=year, y=rentIndex), color="blue") + geom_line(data=df, aes(x=year, y=houseIndex), color="red") + ylab("Index 2009=100") + xlab("Date of Observation") + labs(caption="Sources: Census 1-Year ACS")
+
+indexPlot + theme_stata()
 
 ```
+## makes years into dates; adds date column 
+
+```{r}
+
+# need to make sure year column is "as date" 
+# here, i'm trying to make year column as date 
+
+df <- df %>% mutate(month = 01) %>% mutate(day = 01)
+view(dfTEST)
+
+# need to make month, days into integer instead of numeric 
+
+df$month <- as.character(dfTEST$month)
+df$day <- as.character(dfTEST$day)
+df$year <- as.character(dfTEST$year)
+
+# checking class 
+class(df$day)
+class(df$month)
+class(df$year)
+# all are integers 
+
+# now create new col named as "Date" by combining cols 
+df$Date <- as.Date(with(df, paste(year,month,day,sep='-')), "%Y-%m-%d")
+view(dfT)
+```
+
+# plots here 
+
+```{r}
+ratioPlot <- df %>% ggplot(aes(x=year,y=rent_price_ratio_national_index)) + geom_line() + ylab("Rent Index 2009=100/Housing Index 2009=100") + xlab("Date of Observation") + labs(caption = "Sources: Census 1-Year ACS")
+
+#labs(title = str_wrap("All-Transactions House Price Index for the United States/Consumer Price Index for All Urban Consumers: Rent of Primary Residence in U.S. City Average", 60))
+
+ratioPlot #+ theme_stata()
+
+```
+
 ## just plain summary stats 
 
 ```{r}
 summary(df)
 ts <- ts(df)
 summary(ts)
+```
+
+# save DF 
+```{r}
+write.csv(df, "thesisDF.csv", row.names=TRUE, quote=FALSE) 
+```
+
+# more plot options 
+```{r}
+# https://www.econometrics-with-r.org/14.2-tsdasc.html 
 ```

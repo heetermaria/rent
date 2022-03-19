@@ -1,0 +1,29 @@
+---
+title: "regressions"
+author: "Maria Heeter"
+date: "3/16/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+library(censusapi)
+library(tidycensus)
+library(tidyverse)
+library(viridis)
+library(dplyr)
+library(tidyr)
+library(reshape2)
+# maps 
+library(maps)
+library(usmap)
+library(ggplot2)
+install.packages("XQuartz")
+
+```
+
+## Regressions 
+
+
+
