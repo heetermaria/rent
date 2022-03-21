@@ -1,0 +1,230 @@
+---
+title: "Data Cleaning"
+author: "Maria Heeter"
+date: "2/5/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# census, etc 
+library(readxl)
+library(censusapi)
+library(tidycensus)
+library(tidyverse)
+library(viridis)
+library(dplyr)
+library(tidyr)
+library(reshape2)
+# maps - get rid of these 
+library(maps)
+library(usmap)
+library(ggplot2)
+library(censusapi)
+```
+
+## loads in both datasets 
+
+```{r cars, echo=FALSE, message=FALSE, warning=FALSE}
+# imports CPI Rent/ HPI sep graph 
+RentHpiSep <- read_excel("CPI Rent and HPI (separated).xls",skip = 11)
+
+# imports joint CPI/HPI graph 
+RentHpiJoint <- read_excel("All-Transactions House Price Index for the United States:Consumer Price Index for All Urban Consumers- Rent of Primary Residence in U.S. City Average.xls", 
+    skip = 10)
+
+```
+
+## Api Set up 
+
+```{r, API setup, message=FALSE, error=FALSE}
+# getting started w censusapi 
+# sign up for an API key 
+
+# add key to .Renviron 
+Sys.setenv(CENSUS_KEY="6d7ca29c7ed75ec60a626822e88603fa6231567c")
+
+# reload .Renviron 
+readRenviron("~/.Renviron")
+
+# check to see that expected key is output in R console 
+Sys.getenv("CENSUS_KEY")
+```
+
+## API, ACS Information 
+ 
+```{r, results='hide'}
+# getting started - load the censusapi library 
+v19 <- load_variables(2019, "acs1", cache=FALSE)
+v09 <- load_variables(2009, "acs1", cache=FALSE)
+``` 
+## Adds in census key 
+
+```{r, echo=FALSE,error=FALSE}
+census_api_key("6d7ca29c7ed75ec60a626822e88603fa6231567c", install=TRUE,overwrite=TRUE)
+# api key can be accessed: Sys.getenv("CENSUS_API_KEY").
+```
+
+# Uses API to load in variables included in dataset 
+
+```{r}
+years <- 2009:2019 # includes the following years 
+names(years) <- years
+
+# here, see which variables are included 
+priceVars <- c(contract_rent="B25056_001", housing_value="B25077_001",population="B01003_001", median_age_by_sex="B01002_001") 
+
+pricesByYear <- map_dfr(years, ~{get_acs(geography="county", variables=priceVars, survey="acs1", year=.x
+                                         )
+  },.id="year")
+
+view(pricesByYear) 
+
+# description of the data used:
+
+# ** one year estimates ** B25075_001E is Value for owner-occupied housing units. description: the respondent's estimate of how much the property (house and lot, mobile home and lot, or condominium unit) would sell for if it were for sale.
+
+# description: https://www.socialexplorer.com/data/ACS2010/metadata/?ds=ACS10&var=B25075001
+  
+# ** one year estimates ** B25056_001E is Contract Rent for Renter-occupied housing units. The data on contract rent (also referred to as "rent asked" for vacant units) were obtained from Housing Question 18a in the 2013 American Community Survey. The question was asked at occupied housing units that were for rent, vacant housing units that were for rent, and vacant units rented but not occupied at the time of interview.
+
+# description: https://www.socialexplorer.com/data/ACS2016/metadata/?ds=ACS16&table=B25056
+
+# data not used, but considered: # ** one year estimates ** B25031_001E is MEDIAN GROSS RENT BY BEDROOMS. description: Median gross rent divides the gross rent distribution into two equal parts: one-half of the cases falling below the median gross rent and one-half above the median. Median gross rent is computed on the basis of a standard distribution. (See the "Median Standard Distributions" section in Appendix A). Median gross rent is rounded to the nearest whole dollar. The median gross rent explanation is comparable to the description used for Median and Quartile Contract Rent. (For more information on medians, see "Derived Measures.")
+
+# description: https://www.socialexplorer.com/data/ACS2015/metadata/?ds=ACS15&var=B25031001
+
+```
+
+## Reshaping data 
+
+```{r}
+# long to wide using dcast() function in R: gets the table name and the list of columns to be kept constant (counties) and list of columns to be reshaped (variable) is passed as argument to reshape from long to wide 
+long_to_wide = dcast(pricesByYear, year + GEOID + NAME ~ variable, value.var = "estimate") # NOTE: getting rid of margin of error 
+```
+
+## Adds new variables to dataset 
+
+```{r}
+# here, we'll turn to the description in other papers of which counties were selected
+# need to insert: 
+# 1) the real annual rent growth rate in area i between years t and t+1, (g)
+# 2) the rent-price ratio for area i in year t. (Rt / Pt)
+
+# converts necessary chars to integers 
+long_to_wide$year <- as.integer(long_to_wide$year)
+long_to_wide$contract_rent <- as.integer(long_to_wide$contract_rent)
+
+# inserts difference in year 
+long_to_wide$diff_year <- ifelse(long_to_wide$year > 2009, 1, 0) 
+
+# inserts rent growth rate 
+df <- long_to_wide %>% arrange(year) %>% group_by(GEOID) %>% mutate(rent_diff_nominal = contract_rent - dplyr::lag(contract_rent), rent_perc_change_nominal = (rent_diff_nominal/ diff_year)/dplyr::lag(contract_rent) * 100, rent_price_ratio = (contract_rent/housing_value))
+
+# get rid of figures missing either rent or housing prices using tidyr method 
+df = df %>% drop_na(contract_rent) 
+df = df %>% drop_na(housing_value)
+df = df %>% drop_na(GEOID)
+
+# now, add in the price deflator for personal consumption expenditures excluding good & energy to deflate nominal values
+priceDeflator <- read_csv("priceDeflator.csv")
+priceDeflator = subset(priceDeflator, select = -c(...1) ) # gets rid of extra row 
+
+# adds price deflator by year 
+df <- merge(df, priceDeflator,by="year")
+
+# split NAME column into county name and state 
+df <- df %>% separate(NAME, c("county_name", "state_name"), ", ")
+
+# changing col name 
+colnames(df)[colnames(df)=="GEOID"] <- "fips"
+
+## NEXT SECTION ADDS DATE COL 
+
+# adds new month and date cols (01 as default, we don't have acccurate month/days)
+df <- df %>% mutate(month = 01) %>% mutate(day = 01)
+
+# need to make month, days into char instead of numeric
+df$month <- as.character(df$month)
+df$day <- as.character(df$day)
+df$year <- as.character(df$year)
+
+# checking class - all are chars 
+class(df$day)
+class(df$month)
+class(df$year)
+
+# now create new col named as "Date" by combining cols 
+df$Date <- as.Date(with(df, paste(year,month,day,sep='-')), "%Y-%m-%d")
+
+# now deletes unnecessary month and day cols - moves date next to year in df 
+df = subset(df, select=-c(month, day))
+df = df %>% relocate(Date, .after=year)
+
+# renames date to lower cap 
+rename(df, date=Date)
+```
+
+## Adds real prices, pct changes 
+
+```{r, message=FALSE}
+# adding real hp and real rents 
+df <- df %>% mutate(real_contract_rent = contract_rent * GDPDEF)
+df <- df %>% mutate(real_housing_price = housing_value * GDPDEF)
+
+# adding change in nominal housing growth, growth rate 
+df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(house_diff_nominal = housing_value - dplyr::lag(housing_value), house_perc_change_nominal = (house_diff_nominal/diff_year)/dplyr::lag(housing_value) * 100)
+
+# adds mean value for rent price ratio, housing value, contract rent, rate percent, housing growth rate
+
+# adds mean value for rent price ratio (for each county)
+df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_rent_price_ratio = mean(rent_price_ratio, na.rm=TRUE)) # stripping the NAs
+
+# calculates mean real housing value 
+df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_real_housing_value = mean(real_housing_price, na.rm=TRUE)) # strip NAs
+
+# calculates mean nominal housing value
+df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_nom_housing_value = mean(df$housing_value, na.rm=TRUE)) # strips NAs
+
+# mean real contract rent 
+df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_real_contract_rent = mean(real_contract_rent, na.rm=TRUE)) # strip NAs
+
+# mean real nominal rent 
+df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_nom_contract_rent = mean(contract_rent, na.rm=TRUE))
+
+# mean perc change rent (nom & real)
+df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_rent_pct_change = mean(rent_perc_change_nominal, na.rm=TRUE)) #  strip NAs 
+
+# mean perc change housing (nom & real)
+df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_housing_pct_change = mean(house_perc_change_nominal, na.rm=TRUE)) # strip NAs
+```
+
+# Continues variable creation ()
+
+```{r}
+# makes new cols. 1) average nom real rent by all counties, 2) avg nom real contract rent, 3) avg price-rent ratio 
+df <- df %>% group_by(year) %>% mutate(mean_mean_nom_contract_rent = mean(mean_nom_contract_rent)) %>% mutate(mean_mean_nom_housing_value = mean(mean_nom_housing_value)) %>% mutate(mean_mean_rent_price_ratio = mean(mean_rent_price_ratio))
+
+# NOTE: MAKE MEAN MEAN CONTRACT RENT NOMINAL 
+
+# creates rent index values -- note: using 2009 *nominal* value
+df <- df %>% mutate(rentIndex = (mean_mean_nom_contract_rent/51161.71)*100) # where the number is the 2009 mean *nominal* contract rent 
+
+# creates house index values, where num is 2009 mean *nominal* housing value 
+df <- df %>% mutate(houseIndex = (mean_mean_nom_housing_value/200618.2)*100)
+
+# creates national rent_price_ratio 
+df <- df %>% mutate(rent_price_ratio_national=mean_mean_nom_contract_rent/mean_mean_nom_housing_value)
+
+# national rent_price_ratio_national_index 
+df <- df %>% mutate(rent_price_ratio_national_index = rentIndex/houseIndex)
+```
+
+# saving dataframe 
+
+```{r}
+write.csv(df, "thesisDF.csv", row.names=TRUE, quote=FALSE) 
+```
+
+
+
