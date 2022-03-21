@@ -67,7 +67,7 @@ census_api_key("6d7ca29c7ed75ec60a626822e88603fa6231567c", install=TRUE,overwrit
 
 # Uses API to load in variables included in dataset 
 
-```{r}
+```{r, message=FALSE}
 years <- 2009:2019 # includes the following years 
 names(years) <- years
 
@@ -105,7 +105,7 @@ long_to_wide = dcast(pricesByYear, year + GEOID + NAME ~ variable, value.var = "
 
 ## Adds new variables to dataset 
 
-```{r}
+```{r, message=FALSE}
 # here, we'll turn to the description in other papers of which counties were selected
 # need to insert: 
 # 1) the real annual rent growth rate in area i between years t and t+1, (g)
@@ -162,7 +162,7 @@ df = subset(df, select=-c(month, day))
 df = df %>% relocate(Date, .after=year)
 
 # renames date to lower cap 
-rename(df, date=Date)
+df <- df %>% rename(date=Date)
 ```
 
 ## Adds real prices, pct changes 
