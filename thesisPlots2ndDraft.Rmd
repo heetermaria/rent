@@ -1,0 +1,50 @@
+---
+title: "thesisPlots2ndDraft"
+author: "Maria Heeter"
+date: "3/21/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+library(censusapi)
+library(tidycensus)
+library(tidyverse)
+library(viridis)
+library(dplyr)
+library(tidyr)
+library(reshape2)
+# maps 
+library(maps)
+library(usmap)
+library(ggplot2)
+library(ggthemes)
+library(stringr)
+library(latticeExtra)
+```
+
+## Import in datasets 
+
+```{r, message=FALSE}
+# imports CPI Rent/ HPI sep data (FRED) 
+RentHpiSep <- read_excel("CPI Rent and HPI (separated).xls",skip = 11)
+
+# imports joint CPI/HPI graph (FRED)
+RentHpiJoint <- read_excel("All-Transactions House Price Index for the United States:Consumer Price Index for All Urban Consumers- Rent of Primary Residence in U.S. City Average.xls", 
+    skip = 10)
+ 
+# imports ACS dataframe 
+df <- read.csv("thesisDF.csv")
+```
+
+## Plot roadmap 
+## which plots to include?
+
+# following @ min: 
+
+# real house prices over time 
+# real rents over time 
+# rent-price ratio overtime 
+# real house price index plotted w rents index 
+
