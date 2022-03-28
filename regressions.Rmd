@@ -2,7 +2,9 @@
 title: "regressions"
 author: "Maria Heeter"
 date: "3/16/2022"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -33,7 +35,7 @@ library(plm)
 library(sandwich)
 ```
  
-# insert data 
+# iLoading in data 
 
 ```{r}
 # load in df 
@@ -41,97 +43,25 @@ df <- read.csv("thesisDF.csv")
 view(df)
 ```
 
-## Final dataset additions to run regressions 
+# Initial basic modeling
 
-```{r}
-# note: I can't find the initial thing i wrote down re regressions to include 
- 
-# regression equation is as follows: 
-
-#gi\, t+1 = x + B(Ri,t/Pi,t) + ei, t+10 
-
-# where gi rep annual real rent growth in area i between years t and t + 1 and Ri/Pi rep the annual rent-price ratio for area i in year t 
-
-# notes: cross-section data for years t and t+10 are cross sectional 
-
-# view(df)
-# 
-# # real rent growth 
-# df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(real_rent_growth = diff_growth*GDPDEF)
-# 
-# # real contract rent 
-# df<- df %>% group_by(fips) %>% arrange(year) %>% mutate(real_contract_rent = contract_rent*GDPDEF)
-# 
-# # real rent percent growth 
-# df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(real_rent_perc_growth = (real_rent_growth/diff_year)/real_contract_rent)
-# glimpse(df)
-#                           
-```
-
-## Regressions 
-
-```{r}
-# messing around 
-# # https://www.econometrics-with-r.org/14-ittsraf.html FOR CONTEXT 
-# real_rent_perc_growth = x + beta(rent/price)
-# call: 
-# modelTEST <- lm(formula = real_rent_perc_growth = x + beta(rent_price_ratio) + standard error 
-# if investors expect future rent to grow at a constant annual rate as the gordon formulation, Beta should = -1. 
-# simple call: 
-
-# model <- lm(real_rent_perc_growth ~ rent_price_ratio, data=df)
-# coeftest((model, vcov.=vcovHAC))
-# model
-# summary(model)
-# 
-# # convert series to xsts objects 
-# 
-# df_ts <- ts(df, start=c(2009), frequency=11)
-# print(df_ts)
-# 
-# # get rid of extra time series objects 
-# 
-# df <- df %>% subset(select=-c(X.1, X))
-# view(df)
-# 
-# df_prep <- df %>% group_by(fips) 
-# df_test_ts <- ts(df_prep, start=c(2009), frequency=11)
-# print(df_test_ts)
-# 
-# ### trying again: 
-# 
-# # need to make dataframe into time series 
-# 
-# df_test <- df %>% group_by(fips) <- ts(start=c(2009, ))
-
-```
-
-# modeling 
-
-```{r}
+```{r, results='hide'}
 
 # transform data 
-
-df_reg <- pdata.frame(df, index="Date")
+df_reg <- pdata.frame(df, index="date")
 index(df_reg) # checks ts ... seems wrong(?) 
 
-simpletestFips <- plm(real_rent_perc_growth ~ rent_price_ratio, data=df, index="fips", model="within")
-simpletestFips # should index be fips or year? 
+# simple plm model as a test, index as fips code 
+simpletestFips <- plm(rent_perc_change_nominal ~ rent_price_ratio, data=df, index="fips", model="within")
+simpletestFips
 
-# test: 
-
-simpletestYr <- plm(real_rent_perc_growth ~ rent_price_ratio, data=df, index="year", model="within")
+# test with index as year 
+simpletestYr <- plm(rent_perc_change_nominal ~ rent_price_ratio, data=df, index="year", model="within")
 simpletestYr
-
-# preg <- plm(real_rent_perc_growth ~ rent_price_ratio, data=df, model="within", effect="twoways")
-# 
-# # model 
-# modelTEST <- plm(real_rent_perc_growth ~ rent_price_ratio, data=df, model="within", random.method="swar") # within is fe model
-# modelTES
 
 ```
 
-# estimate simple reg model using 2009 data 
+# Estimating simple reg model using 2009 data 
 
 ```{r}
 # subset the data 
@@ -139,8 +69,8 @@ rentPriceRatio2010 <- subset(df, year == "2010")
 rentPriceRatio2012 <- subset(df, year == "2012")
 
 # estimate simple reg models 
-reg2010sub <- lm(real_rent_perc_growth ~ rent_price_ratio, data=rentPriceRatio2010)
-reg2012sub <- lm(real_rent_perc_growth ~ rent_price_ratio, data=rentPriceRatio2012)
+reg2010sub <- lm(rent_perc_change_nominal ~ rent_price_ratio, data=rentPriceRatio2010)
+reg2012sub <- lm(rent_perc_change_nominal ~ rent_price_ratio, data=rentPriceRatio2012)
 
 # t tests 
 coeftest(reg2010sub, vcov. = vcovHC, type="HC1")
@@ -157,58 +87,32 @@ abline(reg2012sub, lwd = 1.5)
 # note: see for info: https://www.econometrics-with-r.org/10.1-panel-data.html
 ```
 
+# Plm fixed effects regression 
+
 ```{r}
-# unfortunately i think i need to add month and years to each year in order to treat is as ts 
-
-# add column of month and day (01 and 1 respectively)
-# 
-# dfTEST <- df %>% mutate(month = 01) %>% mutate(day = 01)
-# view(dfTEST)
-# 
-# # need to make month, days into integer instead of numeric 
-# 
-# dfTEST$month <- as.character(dfTEST$month)
-# dfTEST$day <- as.character(dfTEST$day)
-# dfTEST$year <- as.character(dfTEST$year)
-# # checking class 
-# class(dfTEST$day)
-# class(dfTEST$month)
-# class(dfTEST$year)
-# # all are integers 
-# 
-# # now create new col named as "Date" by combining cols 
-# dfTEST$Date <- as.Date(with(dfTEST, paste(year,month,day,sep='-')), "%Y-%m-%d")
-# view(dfTEST)
-# 
-
-```
-
-# plm fixed effects regression 
 # question: is the real_rent_perc_growth correct for the year? would it be one ahead? 
-```{r}
-mod <- plm(real_rent_perc_growth ~ rent_price_ratio, data=df, index=c("Date", "fips"), model='within')
+mod <- plm(rent_perc_change_nominal ~ rent_price_ratio, data=df, index=c("date", "fips"), model='within')
 coeftest(mod, vcov.=vcovHC, type="HC1")
 
 # try again w na's omited 
-mod <- plm(real_rent_perc_growth ~ rent_price_ratio, data=df, index=c("Date", "fips"), model='within')
+mod <- plm(rent_perc_change_nominal ~ rent_price_ratio, data=df, index=c("date", "fips"), model='within')
 coeftest(mod, vcov.=vcovHC, type="HC1")
 
 # est coeff is .007 -- the coeff on _ is negative and significant. the interpretation is that the est reduction in rent perc growth due to an increase in the rent_price_ratio by 1 is .007. "although including [fips] fixed effects eliminates the risk of a bias due to omitted factors that vary across states but not over time, we suspect that there are other omitted variables that vary over time and thus cause a bias."
 
 # general reg plot & reg line 
-plot(x = df$rent_price_ratio, y = df$real_rent_perc_growth, xlab = "Rent-Price Ratio (2009 - 2019)", ylab = "Real Rent Percent Growth Rate (2009 - 2019)", ylim = c(0, .4), pch = 20, col = "steelblue")
+plot(x = df$rent_price_ratio, y = df$rent_perc_change_nominal, xlab = "Rent-Price Ratio (2009 - 2019)", ylab = "Real Rent Percent Growth Rate (2009 - 2019)", ylim = c(0, .4), pch = 20, col = "steelblue")
 abline(mod, lwd = 1.5)
 ```
 
-# estimate combined time and entity fixed eff reg model 
+# Estimating combined time and entity fixed eff reg model 
 
 ```{r}
-lm_mod <- lm(real_rent_perc_growth ~ rent_price_ratio + fips + year - 1, data=df)
+lm_mod <- lm(rent_perc_change_nominal ~ rent_price_ratio + fips + year - 1, data=df)
 lm_mod
 
 # model via plm 
-
-lm_mod_plm <- plm(real_rent_perc_growth ~ rent_price_ratio, data = df, index = c("fips", "year"), model="within", effect="twoways")
+lm_mod_plm <- plm(rent_perc_change_nominal ~ rent_price_ratio, data = df, index = c("fips", "year"), model="within", effect="twoways")
 coeftest(lm_mod_plm, vcov=vcovHC, type="HC1")
 
 # before disc outcomes remind that state and year are of class factor 
@@ -222,11 +126,11 @@ dfTEST$year <- as.factor(df$year)
 class(dfTEST$year)
 
 # tries again 
-lm_mod_plm <- plm(real_rent_perc_growth ~ rent_price_ratio, data = dfTEST, index = c("fips", "year"), model="within", effect="twoways")
+lm_mod_plm <- plm(rent_perc_change_nominal ~ rent_price_ratio, data = dfTEST, index = c("fips", "year"), model="within", effect="twoways")
 coeftest(lm_mod_plm, vcov=vcovHC, type="HC1") # note: twoways includes entity and time dummies. adds the addtl regressor year for time fixed effects. 
 
 # plots above model 
-plot(x = dfTEST$rent_price_ratio, y = dfTEST$real_rent_perc_growth, xlab = "Rent-Price Ratio (2009-2019)", ylab = "Real Rent Percent Growth Rate (2009-2019)", ylim = c(0, .4), pch = 20, col = "steelblue")
+plot(x = dfTEST$rent_price_ratio, y = dfTEST$rent_perc_change_nominal, xlab = "Rent-Price Ratio (2009-2019)", ylab = "Real Rent Percent Growth Rate (2009-2019)", ylim = c(0, .4), pch = 20, col = "steelblue")
 abline(lm_mod_plm, lwd = 1.5)
 
 # see: https://www.econometrics-with-r.org/10.4-regression-with-time-fixed-effects.html
@@ -246,25 +150,27 @@ class(lm_mod) # lm
  
  # discussion of all seven models 
 ```{r}
-mod1 <- lm(real_rent_perc_growth ~ rent_price_ratio, data=df)
+mod1 <- lm(rent_perc_change_nominal ~ rent_price_ratio, data=df)
 mod1
 
-mod2 <- plm(real_rent_perc_growth ~ rent_price_ratio + fips, index="fips", data=df) # note: i altered the code to make fips index... 
+mod2 <- plm(rent_perc_change_nominal ~ rent_price_ratio + fips, index="fips", data=df) # note: i altered the code to make fips index... 
 mod2
 
-mod3 <- plm(real_rent_perc_growth ~ rent_price_ratio + fips + year, index = c("fips", "year"), model = "within", effect="twoways", data=df)
+mod3 <- plm(rent_perc_change_nominal ~ rent_price_ratio + fips + year, index = c("fips", "year"), model = "within", effect="twoways", data=df)
 mod3 
 
 # in mod4, we want to include other county specific variables (we can pull this from the api!)
  
-#eg
-
-mod4 <- plm(real_rent_perc_growth ~ rent_price_ratio + fips + year + population, index = c("fips", "year"), model="within", effect="twoways", data=df)
+mod4 <- plm(rent_perc_change_nominal ~ rent_price_ratio + fips + year + population + housing_value + gini_income_inequality_index + household_type + bach_deg_reported + occupancy_status + vacancy_status + housing_units + twelve_mo_median_hh_income, index=c("fips", "year"), model="within", effect="twoways", data=df)
 mod4
+
+# plot 
+plot(x = df$rent_price_ratio, y = df$rent_perc_change_nominal, xlab = "Rent-Price Ratio (2009 - 2019)", ylab = "Real Rent Percent Growth Rate (2009 - 2019)", ylim = c(0, .4), pch = 20, col = "steelblue")
+abline(mod4, lwd = 8)
 
 ```
 
-# stargazer section 
+# Stargazer section: Generates a table
 
 ```{r}
 # gather clustered standard errors in a list 
@@ -280,11 +186,6 @@ tableTEST <- stargazer(mod1, mod2, mod3, mod4, title="Linear Panel Regression Mo
 tableTEST
 ```
 
-```{r}
-# note: i'm going to do some data manipulation and add in some of the ACS variables when i pull in data from the census 
-
-
-```
 
 
 
