@@ -5,7 +5,7 @@ date: "3/21/2022"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE,message=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(readxl)
 library(censusapi)
@@ -22,6 +22,27 @@ library(ggplot2)
 library(ggthemes)
 library(stringr)
 library(latticeExtra)
+# charting 
+library(scales)
+library(ggrepel)
+# For manipulating data
+library(magrittr)
+library(rprojroot)
+library(forcats)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(lubridate)
+# For descriptive statistics and graphing
+library(skimr)
+library(ggplot2)
+library(scales)
+library(gridExtra)
+library(panelr)
+# charts 
+library(ggplot2)
+library(ggthemes)
+library(stringr)
 ```
 
 ## Import in datasets 
@@ -38,13 +59,152 @@ RentHpiJoint <- read_excel("All-Transactions House Price Index for the United St
 df <- read.csv("thesisDF.csv")
 ```
 
-## Plot roadmap 
-## which plots to include?
+# Main plots (rent, hp, rent/hp overtime)
 
-# following @ min: 
+```{r real hp overtime, message=FALSE}
+# title: Real house prices 
+df$commaMeanMeanRealHV <- comma(df$mean_mean_real_housing_value)
 
-# real house prices over time 
-# real rents over time 
-# rent-price ratio overtime 
-# real house price index plotted w rents index 
+plot1 <- ggplot(df, aes(x=as.Date(date), y=mean_mean_real_housing_value)) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + scale_y_continuous(label=comma) + ylab("Dollars")
+
+plot1 + theme_bw()+ theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust=2)) + theme(axis.title.x=element_blank()) +  theme(axis.title.y=element_text(angle=0, vjust=1)) # rotates years, makes y label horizontal 
+```
+
+
+```{r rents overtime, message=FALSE}
+# title= Real contract rents 
+plot2 <- ggplot(df, aes(x=as.Date(date), y=mean_mean_real_contract_rent)) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + ylab("Dollars") + xlab("Date of Observation") + scale_y_continuous(label=comma)
+
+#plots
+plot2 + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(axis.title.x=element_blank()) +  theme(axis.title.y=element_text(angle=0, vjust=1))
+
+# question - why are rents so high 
+```
+
+```{r rent and house index, message=FALSE}
+# title= Real contract rents, house prices (index)
+plot3 <-  ggplot() + geom_line(data = df, aes(x=as.Date(date), y=houseIndex), color="blue") + geom_line(data=df, aes(x=as.Date(date), y=rentIndex), color="red") + ylab("Index") + xlab("Date of Observation") 
+
+plot3 + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(axis.title.x=element_blank()) + labs(caption="Source: 1-Year American Community Survey") + geom_text_repel(aes(x=as.Date(df$date[7000]), y=103.5, label="Real rents")) + geom_text_repel(aes(x=as.Date(df$date[7400]), y=97.6, label="Real house prices")) + theme(axis.title.y=element_text(angle=0))
+```
+```{r}
+# title= Rent-price ratio PLAIN 
+plot4 <- ggplot(df, aes(x=as.Date(date), y=(mean_mean_nom_contract_rent/mean_mean_nom_housing_value))) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + ylab("Ratio") + xlab("Date of Observation") + scale_y_continuous(label=comma) 
+
+plot4 + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(axis.title.x=element_blank()) + theme(axis.title.y=element_text(angle=0))
+
+# seeing overlay 
+```
+
+# nominal prices 
+
+```{r}
+# nominal Hp overtime 
+plot5 <- ggplot(df, aes(x=as.Date(date), y=mean_mean_nom_housing_value)) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + ylab("Dollars") + scale_y_continuous(label=comma)
+
+plot5 + theme_classic() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(axis.title.x=element_blank()) +  theme(axis.title.y=element_text(angle=0)) # rotates years, makes y label horiz
+
+# nominal rent 
+plot6 <- ggplot(df, aes(x=as.Date(date), y=mean_mean_nom_contract_rent)) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + ylab("Dollars") + scale_y_continuous(label=comma)
+
+plot6 + theme_classic() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(axis.title.x=element_blank()) +  theme(axis.title.y=element_text(angle=0)) # rotates years, makes y label horiz
+
+```
+
+# descriptive stats using panelr package 
+
+```{r}
+df_panel<- panel_data(df, id=fips, wave=year) # groups counties 
+
+# trying to fix dates 
+df_panel<- panel_data(df, id=fips, wave=year)
+
+df_panel$year <- as.double(df_panel$year)
+
+# real contract rent per county overtime 
+line_plot(df_panel, real_contract_rent, add.mean=TRUE, alpha=.2) + scale_x_continuous(breaks=2009:2019) + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + scale_y_continuous(label=comma) + ylab("Dollars") + xlab("") +
+  theme(axis.title.y=element_text(angle=0))
+
+# real hp per county overtime 
+line_plot(df_panel, real_housing_price, add.mean=TRUE, alpha=.2, line.size = .3) + scale_x_continuous(breaks=2009:2019) + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + ylab("Dollars") + scale_y_continuous(label=comma) + xlab("")+ labs(caption ="Source: 1-Year American Community Survey") + theme(axis.title.y=element_text(angle=0)) + xlab("")
+
+# real contract rent per county in ca
+line_plot(df_panel, real_contract_rent, overlay = FALSE, subset.ids = filter(df_panel, state_name == "New Hampshire")$fips, add.mean==TRUE)  # insert real county name 
+
+# line by state - need to get mean rent and hp by state 
+# HERE
+
+# rent price ratio per county 
+line_plot(df_panel, rent_price_ratio, add.mean=TRUE, alpha=.2) + scale_x_continuous(breaks=2009:2019) + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(axis.title.y=element_text(angle=0)) + ylab("Ratio") + xlab("")
+
+# national rent price ratio 
+line_plot(df_panel, rent_price_ratio_national)
+
+
+# house perc change per county 
+line_plot(df_panel, house_perc_change_nominal, add.mean=TRUE, alpha=.2, line.size = .25) + ylab("Percent change") + xlab("") + scale_x_continuous(breaks=2009:2019) + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(axis.title.y=element_text(angle=0)) 
+
+# scale_x_ cont gets rid of year decimal pts 
+```
+
+# Map building (in progress)
+
+```{r, results='hide'}
+usmap::plot_usmap(regions = "counties") # sample map: counties
+
+# notes:
+# show which places have the greatest rent growth over time 
+# show which places have greatest housing value growth over time 
+# show which counties have greatest perc change (growth) in rent-price ratio 
+
+# housing perc change in years 2009-2013. half and half 
+
+# after 2013 rent pct change 
+housing_growth_map_14 <- plot_usmap(data=df[df$date >"2013-01-01",], values="mean_rent_pct_change", include=c(df$fips), color="black" )
+
+# 2009 - 2013 
+housing_growth_map_09 <- plot_usmap(data=df[df$date <="2013-01-01", ], values="mean_rent_pct_change", include=c(df$fips), color="black")
+
+housing_growth_map_14
+housing_growth_map_09
+
+# housing perc change in years 2014-2019. half and half 
+
+```
+
+# FRED VIZ 
+
+```{r}
+# imports CPI Rent/ HPI sep graph 
+library(readr)
+rentPriceRatioFRED <- read_csv("rentPriceRatioFRED.csv", 
+    skip = 10)
+
+# imports joint CPI/HPI graph 
+RentHpiJoint <- read_excel("All-Transactions House Price Index for the United States:Consumer Price Index for All Urban Consumers- Rent of Primary Residence in U.S. City Average.xls", 
+    skip = 10)
+```
+
+```{r, echo=FALSE}
+# rent price ratio chart 
+joinedPlot <- rentPriceRatioFRED %>% ggplot(aes(x=observation_date,y=CUUR0000SEHA_USSTHPI)) + geom_line() + ylab("Index") + labs(caption = "Sources: FHFA; BLS; FRED") + xlab("")
+                                      
+
+joinedPlot + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(axis.title.y=element_text(angle=0)) 
+
+# PREV Y: "1982-1984=100/Index 1980:Q1=100"
+# title:"All-Transactions House Price Index for the United States/Consumer Price Index for All Urban Consumers: Rent of Primary Residence in U.S. City Average"
+```
+
+```{r}
+# sep real hp and rents 
+sepPlot <-  ggplot() + geom_line(data = RentHpiSep, aes(x=observation_date...1, y=CUSR0000SEHC), color="blue") + geom_line(data=RentHpiSep, aes(x=observation_date...4, y=USSTHPI), color="red") + ylab("Index") + xlab("") + labs(caption="Sources: FHFA; BLS; FRED")  
+
+sepPlot + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(axis.title.y=element_text(angle=0)) + geom_text_repel(aes(x=RentHpiSep$observation_date...1[466], y=255, label="Real rents")) + geom_text_repel(aes(x=RentHpiSep$observation_date...1[360], y=450, label="Real house prices")) 
+
+# PREX Y: "Index Dec 1982=100, Index 1980:Q1=100")
+# title: 
+```
+
+
 

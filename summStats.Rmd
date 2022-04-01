@@ -1,0 +1,36 @@
+---
+title: "summaryStats"
+author: "Maria Heeter"
+date: "3/30/2022"
+output: html_document
+---
+
+# set up 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(DT)
+```
+
+# load in data 
+```{r}
+# imports ACS dataframe 
+df <- read.csv("thesisDF.csv")
+```
+
+# makes into panel 
+
+```{r}
+df_panel <- panel_data(df, id = fips, wave = year)
+df_panel
+
+summary(df_panel)
+
+# my vars select 
+myvars <- c("mean_mean_nom_housing_value", "mean_mean_nom_contract_rent") # see which to incl 
+
+df_panel_sum <- df_panel[myvars]
+
+sumStats <- summary(df_panel, mean_mean_nom_housing_value, mean_mean_nom_contract_rent, rent_price_ratio, year)
+datatable(sumStats)
+```

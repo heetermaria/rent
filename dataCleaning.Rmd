@@ -60,7 +60,7 @@ v09 <- load_variables(2009, "acs1", cache=FALSE)
 ``` 
 ## Adds in census key 
 
-```{r, echo=FALSE,error=FALSE}
+```{r, error=FALSE}
 census_api_key("6d7ca29c7ed75ec60a626822e88603fa6231567c", install=TRUE,overwrite=TRUE)
 # api key can be accessed: Sys.getenv("CENSUS_API_KEY").
 ```
@@ -184,7 +184,7 @@ df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_rent_price_ratio =
 df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_real_housing_value = mean(real_housing_price, na.rm=TRUE)) # strip NAs
 
 # calculates mean nominal housing value
-df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_nom_housing_value = mean(df$housing_value, na.rm=TRUE)) # strips NAs
+df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_nom_housing_value = mean(housing_value, na.rm=TRUE)) # strips NAs
 
 # mean real contract rent 
 df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_real_contract_rent = mean(real_contract_rent, na.rm=TRUE)) # strip NAs
@@ -204,6 +204,9 @@ df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_housing_pct_change
 ```{r}
 # makes new cols. 1) average nom real rent by all counties, 2) avg nom real contract rent, 3) avg price-rent ratio 
 df <- df %>% group_by(year) %>% mutate(mean_mean_nom_contract_rent = mean(mean_nom_contract_rent)) %>% mutate(mean_mean_nom_housing_value = mean(mean_nom_housing_value)) %>% mutate(mean_mean_rent_price_ratio = mean(mean_rent_price_ratio))
+
+# same above, but including mean real values 
+df <- df %>% group_by(year) %>% mutate(mean_mean_real_contract_rent = mean(mean_real_contract_rent)) %>% mutate(mean_mean_real_housing_value = mean(mean_real_housing_value)) %>% mutate(mean_mean_rent_price_ratio = mean(mean_rent_price_ratio))
 
 # NOTE: MAKE MEAN MEAN CONTRACT RENT NOMINAL 
 
