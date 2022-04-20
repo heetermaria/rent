@@ -103,6 +103,8 @@ view(pricesByYear)
 long_to_wide = dcast(pricesByYear, year + GEOID + NAME ~ variable, value.var = "estimate") # NOTE: getting rid of margin of error 
 ```
 
+
+
 ## Adds new variables to dataset 
 
 ```{r, message=FALSE}
@@ -221,6 +223,15 @@ df <- df %>% mutate(rent_price_ratio_national=mean_mean_nom_contract_rent/mean_m
 
 # national rent_price_ratio_national_index 
 df <- df %>% mutate(rent_price_ratio_national_index = rentIndex/houseIndex)
+```
+
+
+## adds leading 0s to fips codes of length four 
+
+```{r}
+
+stringr::str_pad(df$fips, 5, side="left", pad=0)
+
 ```
 
 # saving dataframe 

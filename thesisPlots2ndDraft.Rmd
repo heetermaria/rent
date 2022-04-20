@@ -68,6 +68,11 @@ df$commaMeanMeanRealHV <- comma(df$mean_mean_real_housing_value)
 plot1 <- ggplot(df, aes(x=as.Date(date), y=mean_mean_real_housing_value)) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + scale_y_continuous(label=comma) + ylab("Dollars")
 
 plot1 + theme_bw()+ theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust=2)) + theme(axis.title.x=element_blank()) +  theme(axis.title.y=element_text(angle=0, vjust=1)) # rotates years, makes y label horizontal 
+
+# title - nominal house prices 
+plot7 <- ggplot(df, aes(x=as.Date(date), y=mean_mean_nom_housing_value)) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + ylab("Dollars") + xlab("Date of Observation") + scale_y_continuous(label=comma)
+
+plot7 + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(axis.title.x=element_blank()) +  theme(axis.title.y=element_text(angle=0, vjust=1))
 ```
 
 
@@ -78,7 +83,11 @@ plot2 <- ggplot(df, aes(x=as.Date(date), y=mean_mean_real_contract_rent)) + geom
 #plots
 plot2 + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(axis.title.x=element_blank()) +  theme(axis.title.y=element_text(angle=0, vjust=1))
 
-# question - why are rents so high 
+# title = nominal contract rents 
+plot6 <- ggplot(df, aes(x=as.Date(date), y=mean_mean_nom_contract_rent)) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + ylab("Dollars") + xlab("Date of Observation") + scale_y_continuous(label=comma)
+
+plot6 + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(axis.title.x=element_blank()) +  theme(axis.title.y=element_text(angle=0, vjust=1))
+
 ```
 
 ```{r rent and house index, message=FALSE}
@@ -114,16 +123,27 @@ plot6 + theme_classic() + theme(axis.text.x = element_text(angle = 90, vjust = 0
 # descriptive stats using panelr package 
 
 ```{r}
-df_panel<- panel_data(df, id=fips, wave=year) # groups counties 
+# groups counties; makes df 
+df_panel <- panel_data(df, id=fips, wave=year) 
 
 # trying to fix dates 
 df_panel<- panel_data(df, id=fips, wave=year)
-
 df_panel$year <- as.double(df_panel$year)
 
+df_panel_filtered_rent <- df_panel %>% filter(real_contract_rent < 1000000000)
+
+
 # real contract rent per county overtime 
-line_plot(df_panel, real_contract_rent, add.mean=TRUE, alpha=.2) + scale_x_continuous(breaks=2009:2019) + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + scale_y_continuous(label=comma) + ylab("Dollars") + xlab("") +
+
+# filter for contract rent subset 
+line_plot(df_panel_filtered_rent, real_contract_rent, add.mean=TRUE, alpha=.2) + scale_x_continuous(breaks=2009:2019) + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + scale_y_continuous(label=comma) + ylab("Dollars") + xlab("") +
   theme(axis.title.y=element_text(angle=0))
+
+
+
+
+# non filtered contract rent subset 
+line_plot(df_panel, real_contract_rent, add.mean=TRUE, alpha=.2) + scale_x_continuous(breaks=2009:2019) + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + ylab("Dollars") + xlab("") + theme(axis.title.y=element_text(angle=0)) + ylim(0,200000) 
 
 # real hp per county overtime 
 line_plot(df_panel, real_housing_price, add.mean=TRUE, alpha=.2, line.size = .3) + scale_x_continuous(breaks=2009:2019) + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + ylab("Dollars") + scale_y_continuous(label=comma) + xlab("")+ labs(caption ="Source: 1-Year American Community Survey") + theme(axis.title.y=element_text(angle=0)) + xlab("")
@@ -165,8 +185,15 @@ housing_growth_map_14 <- plot_usmap(data=df[df$date >"2013-01-01",], values="mea
 # 2009 - 2013 
 housing_growth_map_09 <- plot_usmap(data=df[df$date <="2013-01-01", ], values="mean_rent_pct_change", include=c(df$fips), color="black")
 
-housing_growth_map_14
-housing_growth_map_09
+# adds constant value for mapping 
+df$constant_value <- 1
+
+# counties that are included 
+
+counties_included_map <- plot_usmap(data=df, values = "constant_value", include=c(df$fips), color="black", labels=FALSE) + theme(legend.position = "none")
+counties_included_map
+
+
 
 # housing perc change in years 2014-2019. half and half 
 
