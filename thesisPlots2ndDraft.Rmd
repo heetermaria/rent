@@ -56,35 +56,69 @@ RentHpiJoint <- read_excel("All-Transactions House Price Index for the United St
     skip = 10)
  
 # imports ACS dataframe 
-df <- read.csv("thesisDF.csv")
+df <- read_csv("thesisDF.csv")
 ```
 
 # Main plots (rent, hp, rent/hp overtime)
 
 ```{r real hp overtime, message=FALSE}
-# title: Real house prices 
-df$commaMeanMeanRealHV <- comma(df$mean_mean_real_housing_value)
+# # title: Real house prices 
+# df$commaMeanMeanRealHV <- comma(df$mean_mean_real_housing_value)
+# 
+# plot1 <- ggplot(df, aes(x=as.Date(date), y=mean_mean_real_housing_value)) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + scale_y_continuous(label=comma) + ylab("Dollars")
+# 
+# plot1 + theme_bw()+ theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust=2)) + theme(axis.title.x=element_blank()) +  theme(axis.title.y=element_text(angle=0, vjust=1)) # rotates years, makes y label horizontal 
+# 
+# # title - nominal house prices 
+# plot7 <- ggplot(df, aes(x=as.Date(date), y=mean_mean_nom_housing_value)) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + ylab("Dollars") + xlab("Date of Observation") + scale_y_continuous(label=comma)
+# 
+# plot7 + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(axis.title.x=element_blank()) +  theme(axis.title.y=element_text(angle=0, vjust=1))
+```
+# ABOVE, REDONE! 
 
-plot1 <- ggplot(df, aes(x=as.Date(date), y=mean_mean_real_housing_value)) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + scale_y_continuous(label=comma) + ylab("Dollars")
+```{r}
 
-plot1 + theme_bw()+ theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust=2)) + theme(axis.title.x=element_blank()) +  theme(axis.title.y=element_text(angle=0, vjust=1)) # rotates years, makes y label horizontal 
+# title: Real house prices
+df$commaMeanMeanRealHV <- comma(df$mean_real_housing_value)
 
-# title - nominal house prices 
-plot7 <- ggplot(df, aes(x=as.Date(date), y=mean_mean_nom_housing_value)) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + ylab("Dollars") + xlab("Date of Observation") + scale_y_continuous(label=comma)
+plot1 <- ggplot(df, aes(x=as.Date(date), y=mean_real_housing_value)) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + scale_y_continuous(label=comma) + ylab("Dollars")
+
+plot1 + theme_bw()+ theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust=2)) + theme(axis.title.x=element_blank()) +  theme(axis.title.y=element_text(angle=0, vjust=1)) # rotates years, makes y label horizontal
+
+# title - nominal house prices
+plot7 <- ggplot(df, aes(x=as.Date(date), y=mean_nom_housing_value)) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + ylab("Dollars") + xlab("Date of Observation") + scale_y_continuous(label=comma)
 
 plot7 + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(axis.title.x=element_blank()) +  theme(axis.title.y=element_text(angle=0, vjust=1))
+
+
+
 ```
 
 
 ```{r rents overtime, message=FALSE}
 # title= Real contract rents 
-plot2 <- ggplot(df, aes(x=as.Date(date), y=mean_mean_real_contract_rent)) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + ylab("Dollars") + xlab("Date of Observation") + scale_y_continuous(label=comma)
+# plot2 <- ggplot(df, aes(x=as.Date(date), y=mean_real_contract_rent)) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + ylab("Dollars") + xlab("Date of Observation") + scale_y_continuous(label=comma) 
+# 
+# #plots
+# plot2 + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(axis.title.x=element_blank()) +  theme(axis.title.y=element_text(angle=0, vjust=1)) 
+# 
+# # title = nominal contract rents 
+# plot6 <- ggplot(df, aes(x=as.Date(date), y=mean_nom_contract_rent)) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + ylab("Dollars") + xlab("Date of Observation") + scale_y_continuous(breaks = c("8,665" = 8665, "8,860"= 8860, "8,855" = 8855, "8,865" = 8865), limits=c(8500,9000))  
+# 
+# plot6 + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(axis.title.x=element_blank()) +  theme(axis.title.y=element_text(angle=0, vjust=1))
+
+```
+
+# above, REDONE!!! using new mean value 
+
+```{r}
+plot2 <- ggplot(df, aes(x=as.Date(date), y=mean_real_contract_rent)) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + ylab("Dollars") + xlab("Date of Observation") + scale_y_continuous(label=comma) 
 
 #plots
-plot2 + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(axis.title.x=element_blank()) +  theme(axis.title.y=element_text(angle=0, vjust=1))
+plot2 + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(axis.title.x=element_blank()) +  theme(axis.title.y=element_text(angle=0, vjust=1)) 
 
 # title = nominal contract rents 
-plot6 <- ggplot(df, aes(x=as.Date(date), y=mean_mean_nom_contract_rent)) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + ylab("Dollars") + xlab("Date of Observation") + scale_y_continuous(label=comma)
+plot6 <- ggplot(df, aes(x=as.Date(date), y=mean_nom_contract_rent)) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + ylab("Dollars") + xlab("Date of Observation") + scale_y_continuous(label=comma) 
 
 plot6 + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(axis.title.x=element_blank()) +  theme(axis.title.y=element_text(angle=0, vjust=1))
 
@@ -94,13 +128,16 @@ plot6 + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, h
 # title= Real contract rents, house prices (index)
 plot3 <-  ggplot() + geom_line(data = df, aes(x=as.Date(date), y=houseIndex), color="blue") + geom_line(data=df, aes(x=as.Date(date), y=rentIndex), color="red") + ylab("Index") + xlab("Date of Observation") 
 
-plot3 + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(axis.title.x=element_blank()) + labs(caption="Source: 1-Year American Community Survey") + geom_text_repel(aes(x=as.Date(df$date[7000]), y=103.5, label="Real rents")) + geom_text_repel(aes(x=as.Date(df$date[7400]), y=97.6, label="Real house prices")) + theme(axis.title.y=element_text(angle=0))
+plot3 + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(axis.title.x=element_blank()) + labs(caption="Source: 1-Year American Community Survey") + geom_text_repel(aes(x=as.Date(df$date[6500]), y=122, label="Real rents")) + geom_text_repel(aes(x=as.Date(df$date[7500]), y=110, label="Real house prices")) + theme(axis.title.y=element_text(angle=0))
 ```
-```{r}
-# title= Rent-price ratio PLAIN 
-plot4 <- ggplot(df, aes(x=as.Date(date), y=(mean_mean_nom_contract_rent/mean_mean_nom_housing_value))) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + ylab("Ratio") + xlab("Date of Observation") + scale_y_continuous(label=comma) 
 
-plot4 + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(axis.title.x=element_blank()) + theme(axis.title.y=element_text(angle=0))
+
+```{r}
+
+# title= Rent-price ratio PLAIN 
+plot4 <- ggplot(df, aes(x=as.Date(date), y=(mean_nom_contract_rent/mean_nom_housing_value))) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + ylab("Ratio") + xlab("Date of Observation") 
+
+plot4 + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(axis.title.x=element_blank()) + theme(axis.title.y=element_text(angle=0)) + scale_y_continuous(breaks = c(".047" = 0.047, ".046"= 0.046, ".045" = 0.045 , ".044" = 0.044, ".043" = 0.043, ".042"=0.042))
 
 # seeing overlay 
 ```
@@ -109,12 +146,12 @@ plot4 + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, h
 
 ```{r}
 # nominal Hp overtime 
-plot5 <- ggplot(df, aes(x=as.Date(date), y=mean_mean_nom_housing_value)) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + ylab("Dollars") + scale_y_continuous(label=comma)
+plot5 <- ggplot(df, aes(x=as.Date(date), y=mean_nom_housing_value)) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + ylab("Dollars") + scale_y_continuous(label=comma)
 
 plot5 + theme_classic() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(axis.title.x=element_blank()) +  theme(axis.title.y=element_text(angle=0)) # rotates years, makes y label horiz
 
 # nominal rent 
-plot6 <- ggplot(df, aes(x=as.Date(date), y=mean_mean_nom_contract_rent)) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + ylab("Dollars") + scale_y_continuous(label=comma)
+plot6 <- ggplot(df, aes(x=as.Date(date), y=mean_nom_contract_rent)) + geom_line() + labs(caption ="Source: 1-Year American Community Survey") + ylab("Dollars") + scale_y_continuous(label=comma)
 
 plot6 + theme_classic() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(axis.title.x=element_blank()) +  theme(axis.title.y=element_text(angle=0)) # rotates years, makes y label horiz
 
@@ -138,9 +175,6 @@ df_panel_filtered_rent <- df_panel %>% filter(real_contract_rent < 1000000000)
 # filter for contract rent subset 
 line_plot(df_panel_filtered_rent, real_contract_rent, add.mean=TRUE, alpha=.2) + scale_x_continuous(breaks=2009:2019) + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + scale_y_continuous(label=comma) + ylab("Dollars") + xlab("") +
   theme(axis.title.y=element_text(angle=0))
-
-
-
 
 # non filtered contract rent subset 
 line_plot(df_panel, real_contract_rent, add.mean=TRUE, alpha=.2) + scale_x_continuous(breaks=2009:2019) + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + ylab("Dollars") + xlab("") + theme(axis.title.y=element_text(angle=0)) + ylim(0,200000) 
@@ -184,6 +218,7 @@ housing_growth_map_14 <- plot_usmap(data=df[df$date >"2013-01-01",], values="mea
 
 # 2009 - 2013 
 housing_growth_map_09 <- plot_usmap(data=df[df$date <="2013-01-01", ], values="mean_rent_pct_change", include=c(df$fips), color="black")
+
 
 # adds constant value for mapping 
 df$constant_value <- 1

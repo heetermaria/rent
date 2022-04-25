@@ -30,27 +30,29 @@ df_panel
 summary(df_panel)
 
 # my vars select 
-myvars <- c("mean_mean_nom_housing_value", "mean_mean_nom_contract_rent", "rent_price_ratio_national") # see which to incl 
+myvars <- c("mean_nom_housing_value", "mean_nom_contract_rent", "rent_price_ratio_national", "rent_price_ratio", "housing_value", "contract_rent") # see which to incl 
 df_panel_sum <- df_panel[myvars]
 
 # renames vars 
-df_panel_sum <- rename(df_panel_sum, avgNoHV = mean_mean_nom_housing_value)
-df_panel_sum <- rename(df_panel_sum, avgCoRt = mean_mean_nom_contract_rent)
-df_panel_sum <- rename(df_panel_sum, avgRPR = rent_price_ratio_national)
+df_panel_sum <- rename(df_panel_sum, avgHV = housing_value)
+df_panel_sum <- rename(df_panel_sum, avgRt = contract_rent)
+df_panel_sum <- rename(df_panel_sum, avgRPR = rent_price_ratio)
 
 # gens sum stast 
-sumStats <- summary(df_panel_sum, avgNoHV, avgCoRt, avgRPR, year)
+sumStats <- summary(df_panel_sum, avgHV, avgRt, avgRPR, year)
 datatable(sumStats)
 
-# cuts off decimal 
-sumStats$numeric.mean <- format(round(sumStats$numeric.mean, 2), nsmall=2)
+# cuts off decimal & renames
+sumStats$Variable <- sumStats$skim_variable
+sumStats$Histogram <- sumStats$numeric.hist
+sumStats$Mean <- format(round(sumStats$numeric.mean, 2), nsmall=2)
 sumStats$numeric.sd <- format(round(sumStats$numeric.sd, 2), nsmall=2)
-sumStats$numeric.p0 <- format(round(sumStats$numeric.p0, 2), nsmall=2)
-sumStats$numeric.p50 <- format(round(sumStats$numeric.p50,2), nsmall=2)
-sumStats$numeric.p100 <- format(round(sumStats$numeric.p100, 2), nsmall=2)
-sumStats$year <- as.numeric(gsub(",", "", sumStats$year))
+sumStats$P0 <- format(round(sumStats$numeric.p0, 2), nsmall=2)
+sumStats$P50 <- format(round(sumStats$numeric.p50,2), nsmall=2)
+sumStats$P100 <- format(round(sumStats$numeric.p100, 2), nsmall=2)
+sumStats$Year <- as.numeric(gsub(",", "", sumStats$year))
 
-sumStats <- sumStats %>% dplyr::select(skim_variable, year, numeric.mean, numeric.sd, numeric.p0, numeric.p50, numeric.p100, numeric.hist)
+sumStats <- sumStats %>% dplyr::select(Variable, Year, Mean, P0, P50, P100)
 
 set_flextable_defaults(font.family="Times New Roman")
 flexTableStats <- flextable(sumStats)

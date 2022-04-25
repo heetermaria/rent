@@ -72,27 +72,13 @@ years <- 2009:2019 # includes the following years
 names(years) <- years
 
 # here, see which variables are included 
-priceVars <- c(contract_rent="B25056_001", housing_value="B25077_001",population="B01003_001", median_age_by_sex="B01002_001") 
+priceVars <- c(contract_rent="B25058_001", housing_value="B25077_001",population="B01003_001", median_age_by_sex="B01002_001", gini_income_inequality_index = "B19083_001", white_pop = "B02001_002", total_race = "B02001_001", total_housing_units = "B25002_001", total_occupied = "B25002_002", ass_degree = "B15003_022", bach_degree = "B06009_005", ma_degree = "B15003_023", prof_school = "B15003_024", doct_deg = "B15003_025", total_school = "B15003_001", twelve_mo_median_hh_income = "B07411_001") 
 
 pricesByYear <- map_dfr(years, ~{get_acs(geography="county", variables=priceVars, survey="acs1", year=.x
                                          )
   },.id="year")
 
 view(pricesByYear) 
-
-# description of the data used:
-
-# ** one year estimates ** B25075_001E is Value for owner-occupied housing units. description: the respondent's estimate of how much the property (house and lot, mobile home and lot, or condominium unit) would sell for if it were for sale.
-
-# description: https://www.socialexplorer.com/data/ACS2010/metadata/?ds=ACS10&var=B25075001
-  
-# ** one year estimates ** B25056_001E is Contract Rent for Renter-occupied housing units. The data on contract rent (also referred to as "rent asked" for vacant units) were obtained from Housing Question 18a in the 2013 American Community Survey. The question was asked at occupied housing units that were for rent, vacant housing units that were for rent, and vacant units rented but not occupied at the time of interview.
-
-# description: https://www.socialexplorer.com/data/ACS2016/metadata/?ds=ACS16&table=B25056
-
-# data not used, but considered: # ** one year estimates ** B25031_001E is MEDIAN GROSS RENT BY BEDROOMS. description: Median gross rent divides the gross rent distribution into two equal parts: one-half of the cases falling below the median gross rent and one-half above the median. Median gross rent is computed on the basis of a standard distribution. (See the "Median Standard Distributions" section in Appendix A). Median gross rent is rounded to the nearest whole dollar. The median gross rent explanation is comparable to the description used for Median and Quartile Contract Rent. (For more information on medians, see "Derived Measures.")
-
-# description: https://www.socialexplorer.com/data/ACS2015/metadata/?ds=ACS15&var=B25031001
 
 ```
 
@@ -108,20 +94,38 @@ long_to_wide = dcast(pricesByYear, year + GEOID + NAME ~ variable, value.var = "
 ## Adds new variables to dataset 
 
 ```{r, message=FALSE}
-# here, we'll turn to the description in other papers of which counties were selected
-# need to insert: 
-# 1) the real annual rent growth rate in area i between years t and t+1, (g)
-# 2) the rent-price ratio for area i in year t. (Rt / Pt)
 
-# converts necessary chars to integers 
+# changes from chars 
 long_to_wide$year <- as.integer(long_to_wide$year)
 long_to_wide$contract_rent <- as.integer(long_to_wide$contract_rent)
 
+# renames to df 
+df <- long_to_wide 
+
+# multiplies contract rent by 12 for annual rent 
+df <- df %>% mutate(contract_rent = contract_rent*12)
+
+# good 
+```
+
+# checks for outliers 
+
+```{r}
+# removing outliers based on box plot visuals 
+
+boxplot(df$contract_rent)$out
+boxplot(df$housing_value)$out
+
+```
+
+
+```{r}
+
 # inserts difference in year 
-long_to_wide$diff_year <- ifelse(long_to_wide$year > 2009, 1, 0) 
+df$diff_year <- ifelse(long_to_wide$year > 2009, 1, 0) 
 
 # inserts rent growth rate 
-df <- long_to_wide %>% arrange(year) %>% group_by(GEOID) %>% mutate(rent_diff_nominal = contract_rent - dplyr::lag(contract_rent), rent_perc_change_nominal = (rent_diff_nominal/ diff_year)/dplyr::lag(contract_rent) * 100, rent_price_ratio = (contract_rent/housing_value))
+df <- df %>% arrange(year) %>% group_by(GEOID) %>% mutate(rent_diff_nominal = contract_rent - dplyr::lag(contract_rent), rent_perc_change_nominal = (rent_diff_nominal/ diff_year)/dplyr::lag(contract_rent) * 100, rent_price_ratio = (contract_rent/housing_value))
 
 # get rid of figures missing either rent or housing prices using tidyr method 
 df = df %>% drop_na(contract_rent) 
@@ -130,7 +134,7 @@ df = df %>% drop_na(GEOID)
 
 # now, add in the price deflator for personal consumption expenditures excluding good & energy to deflate nominal values
 priceDeflator <- read_csv("priceDeflator.csv")
-priceDeflator = subset(priceDeflator, select = -c(...1) ) # gets rid of extra row 
+#priceDeflator = subset(priceDeflator, select = -c(...1) ) # gets rid of extra row 
 
 # adds price deflator by year 
 df <- merge(df, priceDeflator,by="year")
@@ -176,63 +180,160 @@ df <- df %>% mutate(real_housing_price = housing_value * GDPDEF)
 
 # adding change in nominal housing growth, growth rate 
 df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(house_diff_nominal = housing_value - dplyr::lag(housing_value), house_perc_change_nominal = (house_diff_nominal/diff_year)/dplyr::lag(housing_value) * 100)
-
-# adds mean value for rent price ratio, housing value, contract rent, rate percent, housing growth rate
-
-# adds mean value for rent price ratio (for each county)
-df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_rent_price_ratio = mean(rent_price_ratio, na.rm=TRUE)) # stripping the NAs
-
-# calculates mean real housing value 
-df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_real_housing_value = mean(real_housing_price, na.rm=TRUE)) # strip NAs
-
-# calculates mean nominal housing value
-df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_nom_housing_value = mean(housing_value, na.rm=TRUE)) # strips NAs
-
-# mean real contract rent 
-df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_real_contract_rent = mean(real_contract_rent, na.rm=TRUE)) # strip NAs
-
-# mean real nominal rent 
-df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_nom_contract_rent = mean(contract_rent, na.rm=TRUE))
-
-# mean perc change rent (nom & real)
-df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_rent_pct_change = mean(rent_perc_change_nominal, na.rm=TRUE)) #  strip NAs 
-
-# mean perc change housing (nom & real)
-df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_housing_pct_change = mean(house_perc_change_nominal, na.rm=TRUE)) # strip NAs
 ```
 
-# Continues variable creation ()
+# adds mean value for rent price ratio, housing value, contract rent, rate perc, housing growth rate TAKING OUT 
 
 ```{r}
-# makes new cols. 1) average nom real rent by all counties, 2) avg nom real contract rent, 3) avg price-rent ratio 
-df <- df %>% group_by(year) %>% mutate(mean_mean_nom_contract_rent = mean(mean_nom_contract_rent)) %>% mutate(mean_mean_nom_housing_value = mean(mean_nom_housing_value)) %>% mutate(mean_mean_rent_price_ratio = mean(mean_rent_price_ratio))
 
-# same above, but including mean real values 
-df <- df %>% group_by(year) %>% mutate(mean_mean_real_contract_rent = mean(mean_real_contract_rent)) %>% mutate(mean_mean_real_housing_value = mean(mean_real_housing_value)) %>% mutate(mean_mean_rent_price_ratio = mean(mean_rent_price_ratio))
+# adds mean value for rent price ratio (for each county)
+# df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_rent_price_ratio = mean(rent_price_ratio, na.rm=TRUE)) # stripping the NAs
+# 
+# # calculates mean real housing value 
+# df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_real_housing_value = mean(real_housing_price, na.rm=TRUE)) # strip NAs
+# 
+# # calculates mean nominal housing value
+# df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_nom_housing_value = mean(housing_value, na.rm=TRUE)) # strips NAs
+# 
+# # mean real contract rent 
+# df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_real_contract_rent = mean(real_contract_rent, na.rm=TRUE)) # strip NAs
+# 
+# # mean real nominal rent 
+# df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_nom_contract_rent = mean(contract_rent, na.rm=TRUE))
+# 
+# # mean perc change rent (nom & real)
+# df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_rent_pct_change = mean(rent_perc_change_nominal, na.rm=TRUE)) #  strip NAs 
+# 
+# # mean perc change housing (nom & real)
+# df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(mean_housing_pct_change = mean(house_perc_change_nominal, na.rm=TRUE)) # strip NAs
+# 
+# # just viewing county 
+# 
+# test <- df %>% subset(county_name == "Baldwin County", select = c("mean_nom_contract_rent", "mean_nom_housing_value", "mean_rent_price_ratio", "contract_rent", "housing_value", "year", "real_contract_rent", "real_housing_price"))
+# view(test)
 
-# NOTE: MAKE MEAN MEAN CONTRACT RENT NOMINAL 
+```
+
+# RE DO: ADD MEAN VALUE FOR RENT-PRICE RATIO, HV, RENT. 
+
+```{r}
+
+# adds mean value for rent price ratio (for each county)
+df <- df %>% group_by(year) %>% arrange(fips) %>% mutate(mean_rent_price_ratio = mean(rent_price_ratio, na.rm=TRUE)) # stripping the NAs
+
+# calculates mean real housing value 
+df <- df %>% group_by(year) %>% arrange(fips) %>% mutate(mean_real_housing_value = mean(real_housing_price, na.rm=TRUE)) # strip NAs
+
+# calculates mean nominal housing value
+df <- df %>% group_by(year) %>% arrange(fips) %>% mutate(mean_nom_housing_value = mean(housing_value, na.rm=TRUE)) # strips NAs
+
+# mean real contract rent 
+df <- df %>% group_by(year) %>% arrange(fips) %>% mutate(mean_real_contract_rent = mean(real_contract_rent, na.rm=TRUE)) # strip NAs
+
+# mean real nominal rent 
+df <- df %>% group_by(year) %>% arrange(fips) %>% mutate(mean_nom_contract_rent = mean(contract_rent, na.rm=TRUE))
+
+# mean perc change rent (nom & real)
+df <- df %>% group_by(year) %>% arrange(fips) %>% mutate(mean_rent_pct_change = mean(rent_perc_change_nominal, na.rm=TRUE)) #  strip NAs 
+
+# mean perc change housing (nom & real)
+df <- df %>% group_by(year) %>% arrange(fips) %>% mutate(mean_housing_pct_change = mean(house_perc_change_nominal, na.rm=TRUE)) # strip NAs
+```
+
+# Continues variable creation - this was creating mean-means but i don't think it's needed
+
+```{r}
+# # makes new cols. 1) average nom real rent by all counties, 2) avg nom real contract rent, 3) avg price-rent ratio 
+# df <- df %>% group_by(year) %>% mutate(mean_mean_nom_contract_rent = mean(mean_nom_contract_rent)) 
+# 
+# df <- df %>% group_by(year) %>% mutate(mean_mean_nom_housing_value = mean(mean_nom_housing_value))
+# 
+# df <- df %>% group_by(year) %>% mutate(mean_mean_rent_price_ratio = mean(mean_rent_price_ratio))
+# 
+# # same above, but including mean real values 
+# df <- df %>% group_by(year) %>% mutate(mean_mean_real_contract_rent = mean(mean_real_contract_rent)) %>% mutate(mean_mean_real_housing_value = mean(mean_real_housing_value)) %>% mutate(mean_mean_rent_price_ratio = mean(mean_rent_price_ratio))
+
+```
+
+# HELP!!!!!! FINISH INDEX!!!!!!!!! TAKEN OUT 
+
+```{r}
+
+# # NOTE: MAKE MEAN MEAN CONTRACT RENT NOMINAL 
+# 
+# # creates rent index values -- note: using 2009 *nominal* value
+# df <- df %>% mutate(rentIndex = (mean_mean_nom_contract_rent/8856.543)*100) 
+# # where the number is the 2009 mean *nominal* contract rent -- UPDATE
+# 
+# # creates house index values, where num is 2009 mean *nominal* housing value 
+# df <- df %>% mutate(houseIndex = (mean_mean_nom_housing_value/200618.2)*100) # this part is fine 
+# 
+# # creates national rent_price_ratio 
+# df <- df %>% mutate(rent_price_ratio_national=mean_mean_nom_contract_rent/mean_mean_nom_housing_value)
+# 
+# # national rent_price_ratio_national_index 
+# df <- df %>% mutate(rent_price_ratio_national_index = rentIndex/houseIndex)
+# 
+# # create subset for year = 2019 
+# mean2009 <- df %>% subset(year == 2009, select =mean_nom_contract_rent)
+# mean(mean2009$mean_nom_contract_rent)
+
+
+```
+
+# HELP!!! finish index REDONE!!!
+```{r}
 
 # creates rent index values -- note: using 2009 *nominal* value
-df <- df %>% mutate(rentIndex = (mean_mean_nom_contract_rent/51161.71)*100) # where the number is the 2009 mean *nominal* contract rent 
+df <- df %>% mutate(rentIndex = (mean_nom_contract_rent/7859.106)*100) 
+# where the number is the 2009 mean *nominal* contract rent -- UPDATE
 
 # creates house index values, where num is 2009 mean *nominal* housing value 
-df <- df %>% mutate(houseIndex = (mean_mean_nom_housing_value/200618.2)*100)
+df <- df %>% mutate(houseIndex = (mean_nom_housing_value/190020.4)*100) # this part is fine 
 
 # creates national rent_price_ratio 
-df <- df %>% mutate(rent_price_ratio_national=mean_mean_nom_contract_rent/mean_mean_nom_housing_value)
+df <- df %>% mutate(rent_price_ratio_national=mean_nom_contract_rent/mean_nom_housing_value)
 
 # national rent_price_ratio_national_index 
 df <- df %>% mutate(rent_price_ratio_national_index = rentIndex/houseIndex)
+
+# # create subset for year = 2019 
+# mean2009 <- df %>% subset(year == 2009, select =mean_nom_contract_rent)
+# mean(mean2009$mean_nom_contract_rent)
+
+# calculates means 
+
+mean2009 <- df %>% subset(year == 2009, select = c("mean_nom_contract_rent", "mean_nom_housing_value"))
+
+
+mean(mean2009$mean_nom_contract_rent)
+mean(mean2009$mean_nom_housing_value)
+
+
 ```
+
 
 
 ## adds leading 0s to fips codes of length four 
 
-```{r}
+```{r, results='hide'}
+
+# adds vars
+
+df <- df %>% mutate(perc_white = white_pop/total_race)
+
+df <- df %>% mutate(perc_units_occupied = total_occupied/total_housing_units)
+
+df <- df %>% mutate(perc_higher_ed = (ass_degree + bach_degree + ma_degree + prof_school + doct_deg) / total_school)
+
+# adds interest rate to DF 
+interestRate <- read_csv("interestRate.csv")
+df <- merge(df, interestRate,by="year")
 
 stringr::str_pad(df$fips, 5, side="left", pad=0)
 
 ```
+
 
 # saving dataframe 
 

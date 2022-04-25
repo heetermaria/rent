@@ -35,7 +35,7 @@ library(plm)
 library(sandwich)
 ```
  
-# iLoading in data 
+# loading in data 
 
 ```{r}
 # load in df 
@@ -43,7 +43,7 @@ df <- read.csv("thesisDF.csv")
 view(df)
 ```
 
-# Initial basic modeling
+# initial basic modeling
 
 ```{r, results='hide'}
 
@@ -150,102 +150,183 @@ class(lm_mod) # lm
  
  # rent perc change models -- lead 1 year 
 ```{r}
-# can't do lag for mod1 
-# mod1 <- lm(rent_perc_change_nominal ~ rent_price_ratio, data=df)
-# mod1
-
-mod2 <- plm(lead(rent_perc_change_nominal,1) ~ rent_price_ratio + fips, index="fips", data=df) # note: i altered the code to make fips index... 
-mod2
-
-mod3 <- plm(lead(rent_perc_change_nominal,1) ~ rent_price_ratio + fips + year, index = c("fips", "year"), model = "within", effect="twoways", data=df)
-mod3 
-
-# in mod4, we want to include other county specific variables (we can pull this from the api!)
- 
-mod4 <- plm(lead(rent_perc_change_nominal,1) ~ rent_price_ratio + fips + year + population + housing_value + gini_income_inequality_index + household_type + bach_deg_reported + occupancy_status + vacancy_status + housing_units + twelve_mo_median_hh_income, index=c("fips", "year"), model="within", effect="twoways", data=df)
-mod4
-
-# plot 
-# plot(x = df$rent_price_ratio, y = df$rent_perc_change_nominal, xlab = "Rent-Price Ratio (2009 - 2019)", ylab = "Real Rent Percent Growth Rate (2009 - 2019)", ylim = c(0, .4), pch = 20, col = "steelblue")
-# abline(mod4, lwd = 8)
+# # can't do lag for mod1 
+# # mod1 <- lm(rent_perc_change_nominal ~ rent_price_ratio, data=df)
+# # mod1
+# 
+# mod2 <- plm(lead(rent_perc_change_nominal,1) ~ rent_price_ratio + fips, index="fips", data=df) # note: i altered the code to make fips index... 
+# mod2
+# 
+# mod3 <- plm(lead(rent_perc_change_nominal,1) ~ rent_price_ratio + fips + year, index = c("fips", "year"), model = "within", effect="twoways", data=df)
+# mod3 
+# 
+# # in mod4, we want to include other county specific variables (we can pull this from the api!)
+#  
+# mod4 <- plm(lead(rent_perc_change_nominal,1) ~ rent_price_ratio + fips + year + interestRate + population + housing_value + gini_income_inequality_index + perc_units_occupied + perc_white + bach_deg_reported + pop_in_owner_occ_housing + total_housing_units + twelve_mo_median_hh_income, index=c("fips", "year"), model="within", effect="twoways", data=df) 
+#               
+#               
+# #               household_type + bach_deg_reported + occupancy_status + vacancy_status + housing_units + twelve_mo_median_hh_income, index=c("fips", "year"), model="within", effect="twoways", data=df)
+# # mod4
+# 
+# # plot 
+# # plot(x = df$rent_price_ratio, y = df$rent_perc_change_nominal, xlab = "Rent-Price Ratio (2009 - 2019)", ylab = "Real Rent Percent Growth Rate (2009 - 2019)", ylim = c(0, .4), pch = 20, col = "steelblue")
+# # abline(mod4, lwd = 8)
 
 ```
 
 # hp growth models -- lead 1 year 
+
 ```{r}
-# can't do lag for mod 1 
-# mod1 <- lm(lead(house_perc_change_nominal,4) ~ rent_price_ratio, data=df)
-# mod1
-
-mod5 <- plm(lead(house_perc_change_nominal,1) ~ rent_price_ratio + fips, index="fips", data=df) # note: i altered the code to make fips index... 
-mod5
-
-mod6 <- plm(lead(house_perc_change_nominal,1) ~ rent_price_ratio + fips + year, index = c("fips", "year"), model = "within", effect="twoways", data=df)
-mod6 
-
-# in mod4, we want to include other county specific variables (we can pull this from the api!)
- 
-mod7 <- plm(lead(house_perc_change_nominal,1) ~ rent_price_ratio + fips + year + population + housing_value + gini_income_inequality_index + household_type + bach_deg_reported + occupancy_status + vacancy_status + housing_units + twelve_mo_median_hh_income, index=c("fips", "year"), model="within", effect="twoways", data=df)
-mod7
-
-# on hp 
-# mod8 <- plm(lead(house_perc_change_nominal,4) ~ rent_price_ratio + fips + year + population + housing_value + gini_income_inequality_index + household_type + bach_deg_reported + occupancy_status + vacancy_status + housing_units + twelve_mo_median_hh_income, index=c("fips", "year"), model="within", effect="twoways", data=df)
-# mod8
+# # can't do lag for mod 1 
+# # mod1 <- lm(lead(house_perc_change_nominal,4) ~ rent_price_ratio, data=df)
+# # mod1
+# 
+# mod5 <- plm(lead(house_perc_change_nominal,1) ~ rent_price_ratio + fips, index="fips", data=df) # note: i altered the code to make fips index... 
+# mod5
+# 
+# mod6 <- plm(lead(house_perc_change_nominal,1) ~ rent_price_ratio + fips + year, index = c("fips", "year"), model = "within", effect="twoways", data=df)
+# mod6 
+# 
+# # in mod4, we want to include other county specific variables (we can pull this from the api!)
+#  
+# mod7 <- plm(lead(house_perc_change_nominal,1) ~ rent_price_ratio + fips + year + population + housing_value + gini_income_inequality_index + household_type + bach_deg_reported + occupancy_status + vacancy_status + housing_units + twelve_mo_median_hh_income, index=c("fips", "year"), model="within", effect="twoways", data=df)
+# mod7
+# 
+# # on hp 
+# # mod8 <- plm(lead(house_perc_change_nominal,4) ~ rent_price_ratio + fips + year + population + housing_value + gini_income_inequality_index + household_type + bach_deg_reported + occupancy_status + vacancy_status + housing_units + twelve_mo_median_hh_income, index=c("fips", "year"), model="within", effect="twoways", data=df)
+# # mod8
 
 ```
+
+
+# examining pairwise correlation of variables to see if there are any that i can remove 
+
+```{r}
+
+
+# vars <- df[,c(7,8,9,10,11,12,13,14,15,16,17,18,19,20,26,47,48)]
+# 
+# #cor(vars, method = c("pearson", "kendall", "spearman"))
+# 
+# res <- cor(vars)
+# print(round(res, 2))
+# ```
+
+```
+
 # rent price growth - four years 
 
 ```{r}
-mod8 <- plm(lead(rent_perc_change_nominal,4) ~ rent_price_ratio + fips, index="fips", data=df) # note: i altered the code to make fips index... 
+
+
+
+# adjusted... 
+mod20 <- plm(lead(rent_diff_nominal,4) ~ rent_price_ratio + fips, index="fips", data=df, vcov=vcovHC, na.action = na.omit) # note: i altered the code to make fips index... 
+mod20
+
+summary(mod20)
+
+mod8 <- plm(lead(rent_perc_change_nominal,4) ~ rent_price_ratio + fips, index="fips", data=df, vcov=vcovHC, na.action = na.omit) # note: i altered the code to make fips index... 
 mod8
 
-mod9 <- plm(lead(rent_perc_change_nominal,4) ~ rent_price_ratio + fips + year, index = c("fips", "year"), model = "within", effect="twoways", data=df)
+mod9 <- plm(lead(rent_perc_change_nominal,4) ~ rent_price_ratio + fips + year, index = c("fips", "year"), model = "within", effect="twoways", data=df, vcov=vcovHC, na.action = na.omit)
 mod9 
 
 # in mod4, we want to include other county specific variables (we can pull this from the api!)
  
-mod10 <- plm(lead(rent_perc_change_nominal,4) ~ rent_price_ratio + fips + year + population + housing_value + gini_income_inequality_index + household_type + bach_deg_reported + occupancy_status + vacancy_status + housing_units + twelve_mo_median_hh_income, index=c("fips", "year"), model="within", effect="twoways", data=df)
+mod10 <- plm(lead(rent_perc_change_nominal,4) ~ rent_price_ratio + fips + year + interestRate + population + gini_income_inequality_index + perc_units_occupied + perc_white + perc_higher_ed + total_housing_units + twelve_mo_median_hh_income, index=c("fips", "year"), model="within", effect="twoways", data=df, vcov=vcovHC, na.action = na.omit)
 mod10
 
 ```
 
+```{r}
+# testing for heteroskedasticity - rent growth model 
+
+library(lmtest)
+
+coeftest(mod8)
+coeftest(mod8, vcovHC)
+coeftest(mod8, vcovHC(mod8, method = "arellano"))
+
+coeftest(mod9)
+coeftest(mod9, vcovHC)
+coeftest(mod9, vcovHC(mod9, method = "arellano"))
+
+coeftest(mod10)
+coeftest(mod10, vcovHC)
+coeftest(mod10, vcovHC(mod10, method = "arellano")) # corrects for heteroskedasticity 
+
+```
+```{r}
+# corrects each rent growth model for hetero sked 
+
+correctMod08 <- coeftest(mod8, vcovHC(mod8, method = "arellano"))
+
+correctMod09 <- coeftest(mod9, vcovHC(mod9, method = "arellano"))
+
+correctMod10 <- coeftest(mod10, vcovHC(mod10, method = "arellano")) # 
+```
+
+
+
+
+
 # hp growth - four year lead 
 ```{r}
 
-mod11 <- plm(lead(house_perc_change_nominal,4) ~ rent_price_ratio + fips, index="fips", data=df) # note: i altered the code to make fips index... 
+mod11 <- plm(lead(house_perc_change_nominal,4) ~ rent_price_ratio + fips, index="fips", data=df, vcov=vcovHC, na.action = na.omit) # note: i altered the code to make fips index... 
 mod11
 
-mod12 <- plm(lead(house_perc_change_nominal,4) ~ rent_price_ratio + fips + year, index = c("fips", "year"), model = "within", effect="twoways", data=df)
+mod12 <- plm(lead(house_perc_change_nominal,4) ~ rent_price_ratio + fips + year, index = c("fips", "year"), model = "within", effect="twoways", data=df,vcov=vcovHC, na.action = na.omit)
 mod12 
 
 # in mod4, we want to include other county specific variables (we can pull this from the api!)
  
-mod13 <- plm(lead(house_perc_change_nominal,4) ~ rent_price_ratio + fips + year + population + housing_value + gini_income_inequality_index + household_type + bach_deg_reported + occupancy_status + vacancy_status + housing_units + twelve_mo_median_hh_income, index=c("fips", "year"), model="within", effect="twoways", data=df)
+mod13 <- plm(lead(house_perc_change_nominal,4) ~ rent_price_ratio + fips + year + interestRate + population + gini_income_inequality_index + perc_units_occupied + perc_white + perc_higher_ed + total_housing_units + twelve_mo_median_hh_income, index=c("fips", "year"), model="within", effect="twoways", data=df, vcov=vcovHC, na.action = na.omit)
 mod13
 
 ```
+
+
+```{r}
+# corrects for heteroskedasticity - HP model 
+correctMod11 <- coeftest(mod11, vcovHC(mod8, method = "arellano"))
+
+correctMod12 <- coeftest(mod12, vcovHC(mod9, method = "arellano"))
+
+correctMod13 <- coeftest(mod13, vcovHC(mod10, method = "arellano")) 
+
+sum <- summary(correctMod13, vcov=vcovHC)
+
+sum <- summary(mod13, vcov = vcovHC)
+sum
+```
+
 
 # Stargazer section: Generates a table
 
 ```{r}
 # gather clustered standard errors in a list 
+# 
+seRent <- list(sqrt(diag(vcovHC(mod8, type="HC1"))), sqrt(diag(vcovHC(mod9, type="HC1"))), sqrt(diag(vcovHC(mod10, type="HC1"))))
 
-se <- list(sqrt(diag(vcovHC(mod2, type="HC1"))), sqrt(diag(vcovHC(mod3, type="HC1"))), sqrt(diag(vcovHC(mod4, type="HC1"))))
+seHP <- list(sqrt(diag(vcovHC(mod11, type="HC1"))), sqrt(diag(vcovHC(mod12, type="HC1"))), sqrt(diag(vcovHC(mod13, type="HC1"))))
+
 
 # generate the table 
 
 # tableTEST <- stargazer(mod1, mod2, mod3, mod4, header=FALSE, se=se, title="Linear Panel Regression Models of Rent Growth and Rent-Price-Ratio", model.numbers=FALSE, column.labels=c("(1)", "(2)", "(3)", "(4)", type="latex", out="Documents/GitHub/econThesisSpring/stargazertest.htmL")) # file name and loc
 
-rentGrowthTable1 <- stargazer(mod2, mod3, mod4, title="Linear Panel Regression Models of Rent Growth and Rent-Price Ratio", header=FALSE, se=se, type="html", out = "rentGrowthTable1.html")
-rentGrowthTable1
+# rentGrowthTable1 <- stargazer(mod2, mod3, mod4, title="Linear Panel Regression Models of Rent Growth and Rent-Price Ratio", header=FALSE, se=se, type="html", out = "rentGrowthTable1.html")
+# rentGrowthTable1
+# 
+# hpGrowthTable1 <- stargazer(mod5, mod6, mod7, title="Linear Panel Regression Models of House Price Growth and Rent-Price Ratio", header=FALSE, se=se, type="html", out = "housePriceTable1.html")
+# hpGrowthTable1
 
-hpGrowthTable1 <- stargazer(mod5, mod6, mod7, title="Linear Panel Regression Models of House Price Growth and Rent-Price Ratio", header=FALSE, se=se, type="html", out = "housePriceTable1.html")
-hpGrowthTable1
-
-rentGrowthTable4 <- stargazer(mod8, mod9, mod10, title="Linear Panel Regression Models of Rent Growth and Rent-Price Ratio", header=FALSE, se=se, type="html", out = "rentGrowthTable4.html")
+rentGrowthTable4 <- stargazer(mod8, mod9, mod10, title="Linear Panel Regression Models of Rent Growth and Rent-Price Ratio", header=FALSE, se=seRent, type="html", out = "rentGrowthTable4.html")
 rentGrowthTable4
   
-hpGrowthTable4 <-  stargazer(mod11, mod12, mod13, title="Linear Panel Regression Models of Rent Growth and Rent-Price Ratio", header=FALSE, se=se, type="html", out = "housePriceTable4e.html")
+hpGrowthTable4 <-  stargazer(mod11, mod12, mod13, title="Linear Panel Regression Models of Housing Growth and Rent-Price Ratio", header=FALSE, se=seHP, type="html", out = "housePriceTable4e.html")
 hpGrowthTable4
 ```
 
