@@ -180,6 +180,13 @@ df <- df %>% mutate(real_housing_price = housing_value * GDPDEF)
 
 # adding change in nominal housing growth, growth rate 
 df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(house_diff_nominal = housing_value - dplyr::lag(housing_value), house_perc_change_nominal = (house_diff_nominal/diff_year)/dplyr::lag(housing_value) * 100)
+
+# inserts REAL rent growth rate 
+df <- df %>% arrange(year) %>% group_by(fips) %>% mutate(rent_diff_real = real_contract_rent - dplyr::lag(real_contract_rent), rent_perc_change_real = (rent_diff_real/ diff_year)/dplyr::lag(real_contract_rent) * 100, rent_price_ratio = (real_contract_rent/real_housing_price))
+
+# inserts REAL house price growth rate 
+df <- df %>% group_by(fips) %>% arrange(year) %>% mutate(house_diff_real = real_housing_price - dplyr::lag(real_housing_price), house_perc_change_real = (house_diff_real/diff_year)/dplyr::lag(real_housing_price) * 100)
+
 ```
 
 # adds mean value for rent price ratio, housing value, contract rent, rate perc, housing growth rate TAKING OUT 

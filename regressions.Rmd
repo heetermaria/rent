@@ -219,6 +219,9 @@ class(lm_mod) # lm
 ```{r}
 
 
+df <- df %>% mutate(leadRent = lag(rent_diff_nominal,n=4))
+
+view(df)
 
 # adjusted... 
 mod20 <- plm(lead(rent_diff_nominal,4) ~ rent_price_ratio + fips, index="fips", data=df, vcov=vcovHC, na.action = na.omit) # note: i altered the code to make fips index... 
@@ -329,8 +332,67 @@ rentGrowthTable4
 hpGrowthTable4 <-  stargazer(mod11, mod12, mod13, title="Linear Panel Regression Models of Housing Growth and Rent-Price Ratio", header=FALSE, se=seHP, type="html", out = "housePriceTable4e.html")
 hpGrowthTable4
 ```
+# REPEATS W REAL CHANGES 
+
+```{r}
+
+mod14 <- plm(lead(rent_perc_change_real,4) ~ rent_price_ratio + fips, index="fips", data=df, vcov=vcovHC, na.action = na.omit) # note: i altered the code to make fips index... 
+mod14
+
+mod15 <- plm(lead(rent_perc_change_real,4) ~ rent_price_ratio + fips + year, index = c("fips", "year"), model = "within", effect="twoways", data=df, vcov=vcovHC, na.action = na.omit)
+mod15
+
+# in mod4, we want to include other county specific variables (we can pull this from the api!)
+ 
+mod16 <- plm(lead(rent_perc_change_real,4) ~ rent_price_ratio + fips + year + interestRate + population + gini_income_inequality_index + perc_units_occupied + perc_white + perc_higher_ed + total_housing_units + twelve_mo_median_hh_income, index=c("fips", "year"), model="within", effect="twoways", data=df, vcov=vcovHC, na.action = na.omit)
+mod16
 
 
 
+```
+
+# hp growth 
+
+```{r}
+
+mod17 <- plm(lead(house_perc_change_real,4) ~ rent_price_ratio + fips, index="fips", data=df, vcov=vcovHC, na.action = na.omit) # note: i altered the code to make fips index... 
+mod17
+
+mod18 <- plm(lead(house_perc_change_real,4) ~ rent_price_ratio + fips + year, index = c("fips", "year"), model = "within", effect="twoways", data=df,vcov=vcovHC, na.action = na.omit)
+mod18 
+
+# in mod4, we want to include other county specific variables (we can pull this from the api!)
+ 
+mod19 <- plm(lead(house_perc_change_real,4) ~ rent_price_ratio + fips + year + interestRate + population + gini_income_inequality_index + perc_units_occupied + perc_white + perc_higher_ed + total_housing_units + twelve_mo_median_hh_income, index=c("fips", "year"), model="within", effect="twoways", data=df, vcov=vcovHC, na.action = na.omit)
+mod19
+```
+
+# new tables 
+
+```{r}
+
+seRentReal <- list(sqrt(diag(vcovHC(mod14, type="HC1"))), sqrt(diag(vcovHC(mod15, type="HC1"))), sqrt(diag(vcovHC(mod16, type="HC1"))))
+
+seHPReal <- list(sqrt(diag(vcovHC(mod17, type="HC1"))), sqrt(diag(vcovHC(mod18, type="HC1"))), sqrt(diag(vcovHC(mod19, type="HC1"))))
+
+
+# generate the table 
+
+# tableTEST <- stargazer(mod1, mod2, mod3, mod4, header=FALSE, se=se, title="Linear Panel Regression Models of Rent Growth and Rent-Price-Ratio", model.numbers=FALSE, column.labels=c("(1)", "(2)", "(3)", "(4)", type="latex", out="Documents/GitHub/econThesisSpring/stargazertest.htmL")) # file name and loc
+
+# rentGrowthTable1 <- stargazer(mod2, mod3, mod4, title="Linear Panel Regression Models of Rent Growth and Rent-Price Ratio", header=FALSE, se=se, type="html", out = "rentGrowthTable1.html")
+# rentGrowthTable1
+# 
+# hpGrowthTable1 <- stargazer(mod5, mod6, mod7, title="Linear Panel Regression Models of House Price Growth and Rent-Price Ratio", header=FALSE, se=se, type="html", out = "housePriceTable1.html")
+# hpGrowthTable1
+
+rentGrowthTableReal <- stargazer(mod14, mod15, mod16, title="Linear Panel Regression Models of Rent Growth and Rent-Price Ratio", header=FALSE, se=seRent, type="html", out = "rentGrowthTableReal.html")
+rentGrowthTableReal
+  
+hpGrowthTableReal <-  stargazer(mod17, mod18, mod19, title="Linear Panel Regression Models of Housing Growth and Rent-Price Ratio", header=FALSE, se=seHP, type="html", out = "housePriceTableReal.html")
+hpGrowthTableReal
+
+
+```
 
 
